@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
-from pptx.enum.chart import XL_AXIS_CROSSES, XL_TICK_LABEL_POSITION, XL_TICK_MARK
+from pptx.enum.chart import (
+    XL_AXIS_CROSSES,
+    XL_TICK_LABEL_POSITION,
+    XL_TICK_MARK,
+    XL_TIME_UNIT,
+)
 from pptx.oxml.chart.shared import CT_Title
 from pptx.oxml.simpletypes import ST_AxisUnit, ST_LblOffset, ST_Orientation
 from pptx.oxml.text import CT_TextBody
@@ -163,6 +168,11 @@ class CT_DateAx(BaseAxisElement):
     crosses = ZeroOrOne("c:crosses", successors=_tag_seq[15:])
     crossesAt = ZeroOrOne("c:crossesAt", successors=_tag_seq[16:])
     lblOffset = ZeroOrOne("c:lblOffset", successors=_tag_seq[18:])
+    baseTimeUnit = ZeroOrOne("c:baseTimeUnit", successors=_tag_seq[19:])
+    majorUnit = ZeroOrOne("c:majorUnit", successors=_tag_seq[20:])
+    majorTimeUnit = ZeroOrOne("c:majorTimeUnit", successors=_tag_seq[21:])
+    minorUnit = ZeroOrOne("c:minorUnit", successors=_tag_seq[22:])
+    minorTimeUnit = ZeroOrOne("c:minorTimeUnit", successors=_tag_seq[23:])
     del _tag_seq
 
 
@@ -244,6 +254,15 @@ class CT_TickLblPos(BaseOxmlElement):
     """`c:tickLblPos` element."""
 
     val = OptionalAttribute("val", XL_TICK_LABEL_POSITION)
+
+
+class CT_TimeUnit(BaseOxmlElement):
+    """Used for `c:baseTimeUnit`, `c:majorTimeUnit`, and `c:minorTimeUnit` elements.
+
+    Specifies the unit of time (days, months, or years) for a date (time-scale) axis.
+    """
+
+    val = OptionalAttribute("val", XL_TIME_UNIT, default=XL_TIME_UNIT.DAYS)
 
 
 class CT_TickMark(BaseOxmlElement):
