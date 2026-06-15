@@ -42,12 +42,53 @@ class FontFiles(object):
         """
         Return a sequence of directory paths likely to contain fonts on the
         current platform.
+
+        Any directories named in the ``PYTHON_PPTX_FONT_DIRECTORY`` environment
+        variable (a path-separator delimited list, like ``PATH``) are searched
+        first, in addition to the platform default locations. This allows custom
+        font folders to be used and provides an escape hatch on platforms whose
+        defaults are not (yet) known.
         """
+        directories = list(cls._custom_font_directories())
         if sys.platform.startswith("darwin"):
-            return cls._os_x_font_directories()
-        if sys.platform.startswith("win32"):
-            return cls._windows_font_directories()
-        raise OSError("unsupported operating system")
+            directories.extend(cls._os_x_font_directories())
+        elif sys.platform.startswith("win32"):
+            directories.extend(cls._windows_font_directories())
+        elif sys.platform.startswith("linux"):
+            directories.extend(cls._linux_font_directories())
+        elif not directories:
+            raise OSError("unsupported operating system")
+        return directories
+
+    @classmethod
+    def _custom_font_directories(cls):
+        """
+        Return the directory paths named in the ``PYTHON_PPTX_FONT_DIRECTORY``
+        environment variable, or an empty sequence when it is not set. Multiple
+        paths are separated by the OS path separator (``:`` on POSIX, ``;`` on
+        Windows).
+        """
+        value = os.environ.get("PYTHON_PPTX_FONT_DIRECTORY")
+        if not value:
+            return []
+        return [path for path in value.split(os.pathsep) if path]
+
+    @classmethod
+    def _linux_font_directories(cls):
+        """
+        Return a sequence of directory paths on Linux in which fonts are likely
+        to be located.
+        """
+        linux_font_dirs = ["/usr/share/fonts", "/usr/local/share/fonts"]
+        home = os.environ.get("HOME")
+        if home is not None:
+            linux_font_dirs.extend(
+                [
+                    os.path.join(home, ".local", "share", "fonts"),
+                    os.path.join(home, ".fonts"),
+                ]
+            )
+        return linux_font_dirs
 
     @classmethod
     def _iter_font_files_in(cls, directory):
