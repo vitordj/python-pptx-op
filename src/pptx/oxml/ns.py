@@ -8,6 +8,8 @@ _nsmap = {
     "a": "http://schemas.openxmlformats.org/drawingml/2006/main",
     "c": "http://schemas.openxmlformats.org/drawingml/2006/chart",
     "cp": "http://schemas.openxmlformats.org/package/2006/metadata/core-properties",
+    "cs": "http://schemas.microsoft.com/office/drawing/2012/chartStyle",
+    "cx": "http://schemas.microsoft.com/office/drawing/2014/chartex",
     "ct": "http://schemas.openxmlformats.org/package/2006/content-types",
     "dc": "http://purl.org/dc/elements/1.1/",
     "dcmitype": "http://purl.org/dc/dcmitype/",
