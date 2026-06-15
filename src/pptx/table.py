@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Iterator
 
 from pptx.dml.fill import FillFormat
+from pptx.dml.line import LineFormat
 from pptx.oxml.table import TcRange
 from pptx.shapes import Subshape
 from pptx.text.text import TextFrame
@@ -186,6 +187,22 @@ class _Cell(Subshape):
         if not isinstance(other, type(self)):
             return True
         return self._tc is not other._tc
+
+    @lazyproperty
+    def borders(self) -> "_CellBorders":
+        """|_CellBorders| instance providing access to this cell's four edge borders.
+
+        Each edge is a |LineFormat| object, so borders are set the same way as any other
+        line::
+
+            cell.borders.left.width = Pt(1)
+            cell.borders.left.color.rgb = RGBColor(0x8C, 0xC6, 0x40)
+            cell.borders.bottom.dash_style = MSO_LINE_DASH_STYLE.DASH
+
+        PowerPoint applies table borders cell-by-cell, so to outline a region set the
+        outward-facing edge of each perimeter cell.
+        """
+        return _CellBorders(self._tc)
 
     @lazyproperty
     def fill(self) -> FillFormat:
@@ -422,6 +439,68 @@ class _Row(Subshape):
     def height(self, height: Length):
         self._tr.h = height
         self._parent.notify_height_changed()
+
+
+class _CellBorderLine:
+    """Adapter exposing one edge of a cell's `a:tcPr` as a |LineFormat| parent.
+
+    |LineFormat| asks its parent for ``.ln`` (the current `a:ln`-style element, or None)
+    and ``.get_or_add_ln()``. Here those map to a specific border edge element
+    (``a:lnL``/``a:lnR``/``a:lnT``/``a:lnB`` and the two diagonals), which share the
+    ``CT_LineProperties`` element class with the familiar shape ``a:ln``.
+    """
+
+    def __init__(self, tc: CT_TableCell, edge: str):
+        self._tc = tc
+        self._edge = edge  # one of "lnL", "lnR", "lnT", "lnB", "lnTlToBr", "lnBlToTr"
+
+    @property
+    def ln(self):
+        tcPr = self._tc.tcPr
+        if tcPr is None:
+            return None
+        return getattr(tcPr, self._edge)
+
+    def get_or_add_ln(self):
+        tcPr = self._tc.get_or_add_tcPr()
+        return getattr(tcPr, "get_or_add_%s" % self._edge)()
+
+
+class _CellBorders:
+    """Provides |LineFormat| access to the borders of a table cell.
+
+    Exposes the four edges (:attr:`left`, :attr:`right`, :attr:`top`, :attr:`bottom`)
+    and the two diagonals (:attr:`tl_to_br`, :attr:`bl_to_tr`).
+    """
+
+    def __init__(self, tc: CT_TableCell):
+        self._tc = tc
+
+    @lazyproperty
+    def left(self) -> LineFormat:
+        return LineFormat(_CellBorderLine(self._tc, "lnL"))
+
+    @lazyproperty
+    def right(self) -> LineFormat:
+        return LineFormat(_CellBorderLine(self._tc, "lnR"))
+
+    @lazyproperty
+    def top(self) -> LineFormat:
+        return LineFormat(_CellBorderLine(self._tc, "lnT"))
+
+    @lazyproperty
+    def bottom(self) -> LineFormat:
+        return LineFormat(_CellBorderLine(self._tc, "lnB"))
+
+    @lazyproperty
+    def tl_to_br(self) -> LineFormat:
+        """Diagonal border from the top-left to the bottom-right corner."""
+        return LineFormat(_CellBorderLine(self._tc, "lnTlToBr"))
+
+    @lazyproperty
+    def bl_to_tr(self) -> LineFormat:
+        """Diagonal border from the bottom-left to the top-right corner."""
+        return LineFormat(_CellBorderLine(self._tc, "lnBlToTr"))
 
 
 class _CellCollection(Subshape):

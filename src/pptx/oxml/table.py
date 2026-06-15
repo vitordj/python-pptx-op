@@ -363,6 +363,39 @@ class CT_TableCell(BaseOxmlElement):
 class CT_TableCellProperties(BaseOxmlElement):
     """`a:tcPr` custom element class"""
 
+    get_or_add_lnL: Callable[[], BaseOxmlElement]
+    get_or_add_lnR: Callable[[], BaseOxmlElement]
+    get_or_add_lnT: Callable[[], BaseOxmlElement]
+    get_or_add_lnB: Callable[[], BaseOxmlElement]
+    get_or_add_lnTlToBr: Callable[[], BaseOxmlElement]
+    get_or_add_lnBlToTr: Callable[[], BaseOxmlElement]
+
+    # -- cell-border line elements precede the fill in the `a:tcPr` schema --
+    _border_seq = (
+        "a:lnL",
+        "a:lnR",
+        "a:lnT",
+        "a:lnB",
+        "a:lnTlToBr",
+        "a:lnBlToTr",
+        "a:cell3D",
+        "a:noFill",
+        "a:solidFill",
+        "a:gradFill",
+        "a:blipFill",
+        "a:pattFill",
+        "a:grpFill",
+        "a:headers",
+        "a:extLst",
+    )
+    lnL = ZeroOrOne("a:lnL", successors=_border_seq[1:])
+    lnR = ZeroOrOne("a:lnR", successors=_border_seq[2:])
+    lnT = ZeroOrOne("a:lnT", successors=_border_seq[3:])
+    lnB = ZeroOrOne("a:lnB", successors=_border_seq[4:])
+    lnTlToBr = ZeroOrOne("a:lnTlToBr", successors=_border_seq[5:])
+    lnBlToTr = ZeroOrOne("a:lnBlToTr", successors=_border_seq[6:])
+    del _border_seq
+
     eg_fillProperties = ZeroOrOneChoice(
         (
             Choice("a:noFill"),
