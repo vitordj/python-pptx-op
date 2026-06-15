@@ -291,6 +291,48 @@ class XL_CHART_TYPE(BaseEnum):
     """Scatter with Smoothed Lines and No Data Markers."""
 
 
+class XL_CHART_EX_TYPE(BaseXmlEnum):
+    """Specifies a chart type from the 2014 Chart Extension ("chartEx") family.
+
+    These are the "modern" charts Microsoft introduced with Office 2016 (waterfall,
+    treemap, sunburst, box & whisker, histogram/Pareto, funnel). They use a separate
+    XML schema (namespace ``...drawing/2014/chartex``, prefix ``cx:``) rather than the
+    legacy ``c:`` chart schema, and a single chart type is distinguished by the
+    ``layoutId`` attribute of its ``cx:series`` element. The XML value of each member is
+    exactly that ``layoutId``.
+
+    Example::
+
+        from pptx.enum.chart import XL_CHART_EX_TYPE
+
+        slide.shapes.add_chartex(XL_CHART_EX_TYPE.WATERFALL, x, y, cx, cy, data)
+    """
+
+    WATERFALL = (0, "waterfall", "Waterfall (bridge) chart.")
+    """Waterfall (bridge) chart."""
+
+    FUNNEL = (1, "funnel", "Funnel chart.")
+    """Funnel chart."""
+
+    TREEMAP = (2, "treemap", "Treemap (hierarchical area) chart.")
+    """Treemap (hierarchical area) chart."""
+
+    SUNBURST = (3, "sunburst", "Sunburst (hierarchical ring) chart.")
+    """Sunburst (hierarchical ring) chart."""
+
+    BOX_WHISKER = (4, "boxWhisker", "Box & Whisker (statistical) chart.")
+    """Box & Whisker (statistical) chart."""
+
+    CLUSTERED_COLUMN = (5, "clusteredColumn", "Clustered-column chart, used by Histogram/Pareto.")
+    """Clustered-column chart (the layout used by Histogram and Pareto)."""
+
+    PARETO_LINE = (6, "paretoLine", "Pareto line, overlaid on a histogram.")
+    """Pareto line, overlaid on a histogram."""
+
+    REGION_MAP = (7, "regionMap", "Filled region (geographic) map.")
+    """Filled region (geographic) map."""
+
+
 class XL_DATA_LABEL_POSITION(BaseXmlEnum):
     """Specifies where the data label is positioned.
 
@@ -462,6 +504,33 @@ class XL_TICK_MARK(BaseXmlEnum):
 
     OUTSIDE = (3, "out", "Tick mark appears outside the axis")
     """Tick mark appears outside the axis"""
+
+
+class XL_TIME_UNIT(BaseXmlEnum):
+    """Specifies the unit of time for chart axes and data series.
+
+    Used for the base, major, and minor time units of a date (time-scale) category
+    axis.
+
+    Example::
+
+        from pptx.enum.chart import XL_TIME_UNIT
+
+        date_axis.major_time_unit = XL_TIME_UNIT.MONTHS
+
+    MS API Name: `XlTimeUnit`
+
+    https://learn.microsoft.com/en-us/office/vba/api/excel.xltimeunit
+    """
+
+    DAYS = (0, "days", "Days")
+    """Days"""
+
+    MONTHS = (1, "months", "Months")
+    """Months"""
+
+    YEARS = (2, "years", "Years")
+    """Years"""
 
 
 class XL_TICK_LABEL_POSITION(BaseXmlEnum):

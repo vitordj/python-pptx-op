@@ -8,6 +8,7 @@ from pptx.enum.chart import (
     XL_CATEGORY_TYPE,
     XL_TICK_LABEL_POSITION,
     XL_TICK_MARK,
+    XL_TIME_UNIT,
 )
 from pptx.oxml.ns import qn
 from pptx.oxml.simpletypes import ST_Orientation
@@ -317,6 +318,107 @@ class DateAxis(_BaseAxis):
         axis. Unconditionally ``TIME_SCALE`` for a |DateAxis| object.
         """
         return XL_CATEGORY_TYPE.TIME_SCALE
+
+    @property
+    def base_time_unit(self):
+        """Read/write :ref:`XlTimeUnit` value specifying the smallest time unit.
+
+        This is the base unit (`c:baseTimeUnit`) used to group categories on the axis,
+        for example grouping daily data points into months. Returns `XL_TIME_UNIT.DAYS`
+        when no base time unit is set (the PowerPoint default). The value |None| also
+        corresponds to the 'Auto' setting and removes the element.
+        """
+        baseTimeUnit = self._element.baseTimeUnit
+        if baseTimeUnit is None:
+            return None
+        return baseTimeUnit.val
+
+    @base_time_unit.setter
+    def base_time_unit(self, value):
+        self._element._remove_baseTimeUnit()
+        if value is None:
+            return
+        self._element._add_baseTimeUnit().val = value
+
+    @property
+    def major_unit(self):
+        """Read/write float number of `major_time_unit`\\s between major tick marks.
+
+        For example, a value of 3 with `major_time_unit` of `MONTHS` places a major tick
+        mark (and gridline/label) every three months. |None| corresponds to the 'Auto'
+        setting in the UI and removes the element. Mirrors the COM
+        `Axis.MajorUnit` property.
+        """
+        majorUnit = self._element.majorUnit
+        if majorUnit is None:
+            return None
+        return majorUnit.val
+
+    @major_unit.setter
+    def major_unit(self, value):
+        self._element._remove_majorUnit()
+        if value is None:
+            return
+        self._element._add_majorUnit().val = value
+
+    @property
+    def major_time_unit(self):
+        """Read/write :ref:`XlTimeUnit` value for the spacing of major tick marks.
+
+        Specifies whether `major_unit` is counted in days, months, or years
+        (`c:majorTimeUnit`). Mirrors the COM `Axis.MajorUnitScale` property. Returns
+        |None| when no major time unit is set.
+        """
+        majorTimeUnit = self._element.majorTimeUnit
+        if majorTimeUnit is None:
+            return None
+        return majorTimeUnit.val
+
+    @major_time_unit.setter
+    def major_time_unit(self, value):
+        self._element._remove_majorTimeUnit()
+        if value is None:
+            return
+        self._element._add_majorTimeUnit().val = value
+
+    @property
+    def minor_unit(self):
+        """Read/write float number of `minor_time_unit`\\s between minor tick marks.
+
+        |None| corresponds to the 'Auto' setting in the UI and removes the element.
+        Mirrors the COM `Axis.MinorUnit` property.
+        """
+        minorUnit = self._element.minorUnit
+        if minorUnit is None:
+            return None
+        return minorUnit.val
+
+    @minor_unit.setter
+    def minor_unit(self, value):
+        self._element._remove_minorUnit()
+        if value is None:
+            return
+        self._element._add_minorUnit().val = value
+
+    @property
+    def minor_time_unit(self):
+        """Read/write :ref:`XlTimeUnit` value for the spacing of minor tick marks.
+
+        Specifies whether `minor_unit` is counted in days, months, or years
+        (`c:minorTimeUnit`). Mirrors the COM `Axis.MinorUnitScale` property. Returns
+        |None| when no minor time unit is set.
+        """
+        minorTimeUnit = self._element.minorTimeUnit
+        if minorTimeUnit is None:
+            return None
+        return minorTimeUnit.val
+
+    @minor_time_unit.setter
+    def minor_time_unit(self, value):
+        self._element._remove_minorTimeUnit()
+        if value is None:
+            return
+        self._element._add_minorTimeUnit().val = value
 
 
 class MajorGridlines(ElementProxy):

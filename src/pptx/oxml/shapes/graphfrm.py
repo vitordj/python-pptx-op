@@ -19,6 +19,7 @@ from pptx.oxml.xmlchemy import (
 )
 from pptx.spec import (
     GRAPHIC_DATA_URI_CHART,
+    GRAPHIC_DATA_URI_CHART_EX,
     GRAPHIC_DATA_URI_OLEOBJ,
     GRAPHIC_DATA_URI_TABLE,
 )
@@ -186,6 +187,26 @@ class CT_GraphicalObjectFrame(BaseShapeElement):
         graphicData = graphicFrame.graphic.graphicData
         graphicData.uri = GRAPHIC_DATA_URI_CHART
         graphicData.append(CT_Chart.new_chart(rId))
+        return graphicFrame
+
+    @classmethod
+    def new_chartex_graphicFrame(
+        cls, id_: int, name: str, rId: str, x: int, y: int, cx: int, cy: int
+    ) -> CT_GraphicalObjectFrame:
+        """Return a `p:graphicFrame` element tree referring to a chartEx part.
+
+        The graphic-data payload is a ``<cx:chart r:id="..."/>`` element rather than the
+        legacy ``<c:chart>``, and the graphic-data URI identifies the 2014 chartEx
+        namespace.
+        """
+        graphicFrame = CT_GraphicalObjectFrame.new_graphicFrame(id_, name, x, y, cx, cy)
+        graphicData = graphicFrame.graphic.graphicData
+        graphicData.uri = GRAPHIC_DATA_URI_CHART_EX
+        graphicData.append(
+            parse_xml(
+                f"<cx:chart {nsdecls('cx', 'r')} r:id=\"{rId}\"/>"
+            )
+        )
         return graphicFrame
 
     @classmethod

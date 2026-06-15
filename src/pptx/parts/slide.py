@@ -11,6 +11,7 @@ from pptx.opc.package import XmlPart
 from pptx.opc.packuri import PackURI
 from pptx.oxml.slide import CT_NotesMaster, CT_NotesSlide, CT_Slide
 from pptx.oxml.theme import CT_OfficeStyleSheet
+from pptx.chartex.part import ChartExPart
 from pptx.parts.chart import ChartPart
 from pptx.parts.embeddedpackage import EmbeddedPackagePart
 from pptx.slide import NotesMaster, NotesSlide, Slide, SlideLayout, SlideMaster
@@ -18,7 +19,8 @@ from pptx.util import lazyproperty
 
 if TYPE_CHECKING:
     from pptx.chart.data import ChartData
-    from pptx.enum.chart import XL_CHART_TYPE
+    from pptx.chartex.data import ChartExData
+    from pptx.enum.chart import XL_CHART_EX_TYPE, XL_CHART_TYPE
     from pptx.media import Video
     from pptx.parts.image import Image, ImagePart
 
@@ -175,6 +177,16 @@ class SlidePart(BaseSlidePart):
         part by `rId`.
         """
         return self.relate_to(ChartPart.new(chart_type, chart_data, self._package), RT.CHART)
+
+    def add_chartex_part(self, chart_type: "XL_CHART_EX_TYPE", chart_data: "ChartExData"):
+        """Return str rId of new |ChartExPart| object containing chartEx of `chart_type`.
+
+        The chartEx chart depicts `chart_data` and is related to the slide contained in
+        this part by `rId`, using the chartEx relationship type.
+        """
+        return self.relate_to(
+            ChartExPart.new(chart_type, chart_data, self._package), RT.CHART_EX
+        )
 
     def add_embedded_ole_object_part(
         self, prog_id: PROG_ID | str, ole_object_file: str | IO[bytes]
