@@ -18,8 +18,20 @@ class _BaseColorElement(BaseOxmlElement):
     Base class for <a:srgbClr> and <a:schemeClr> elements.
     """
 
+    alpha = ZeroOrOne("a:alpha")
     lumMod = ZeroOrOne("a:lumMod")
     lumOff = ZeroOrOne("a:lumOff")
+
+    def add_alpha(self, value):
+        """Return a newly added (or updated) <a:alpha> child, `value` an opacity 0.0..1.0."""
+        alpha = self.get_or_add_alpha()
+        alpha.val = value
+        return alpha
+
+    def clear_alpha(self):
+        """Return self after removing any <a:alpha> child element."""
+        self._remove_alpha()
+        return self
 
     def add_lumMod(self, value):
         """

@@ -88,6 +88,21 @@ class ColorFormat(object):
         self._color.theme_color = mso_theme_color_idx
 
     @property
+    def transparency(self):
+        """Read/write float in range 0.0..1.0 indicating the transparency of this color.
+
+        0.0 (the default) is fully opaque; 1.0 is fully transparent. Corresponds to the
+        ``<a:alpha>`` child of the color element, where ``alpha = 1.0 - transparency``. Raises
+        |ValueError| on set when no color is defined (set ``.rgb`` or ``.theme_color`` first).
+        """
+        return self._color.transparency
+
+    @transparency.setter
+    def transparency(self, value):
+        self._validate_transparency_value(value)
+        self._color.transparency = value
+
+    @property
     def type(self):
         """
         Read-only. A value from :ref:`MsoColorType`, either RGB or SCHEME,
@@ -95,6 +110,15 @@ class ColorFormat(object):
         is defined at the level of this font.
         """
         return self._color.color_type
+
+    def _validate_transparency_value(self, value):
+        if value < 0.0 or value > 1.0:
+            raise ValueError("transparency must be a number in range 0.0 to 1.0")
+        if isinstance(self._color, _NoneColor):
+            raise ValueError(
+                "can't set transparency when color.type is None. Set color.rgb"
+                " or .theme_color first."
+            )
 
     def _validate_brightness_value(self, value):
         if value < -1.0 or value > 1.0:
@@ -157,6 +181,21 @@ class _Color(object):
     def color_type(self):  # pragma: no cover
         tmpl = ".color_type property must be implemented on %s"
         raise NotImplementedError(tmpl % self.__class__.__name__)
+
+    @property
+    def transparency(self):
+        """Transparency of this color as a float in range 0.0 (opaque)..1.0 (transparent)."""
+        alpha = self._xClr.alpha
+        if alpha is None:
+            return 0.0
+        return 1.0 - alpha.val
+
+    @transparency.setter
+    def transparency(self, value):
+        if value == 0:
+            self._xClr.clear_alpha()
+            return
+        self._xClr.add_alpha(1.0 - value)
 
     @property
     def rgb(self):
