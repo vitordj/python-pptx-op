@@ -9,6 +9,8 @@ from pptx.enum.dml import MSO_FILL
 from pptx.enum.lang import MSO_LANGUAGE_ID
 from pptx.enum.text import MSO_AUTO_SIZE, MSO_UNDERLINE, MSO_VERTICAL_ANCHOR
 from pptx.opc.constants import RELATIONSHIP_TYPE as RT
+from pptx.oxml import parse_xml
+from pptx.oxml.ns import nsdecls
 from pptx.oxml.simpletypes import ST_TextWrappingType
 from pptx.shapes import Subshape
 from pptx.text.fonts import FontFiles
@@ -421,6 +423,73 @@ class Font(object):
             value = MSO_UNDERLINE.NONE
         self._element.u = value
 
+    @property
+    def strikethrough(self) -> bool | None:
+        """Get or set the strikethrough setting for this |Font|.
+
+        Value is |True|, |False|, or |None|. |None| (default) inherits the setting from the style
+        hierarchy. |True| applies a single strikethrough (``strike="sngStrike"``); |False| applies
+        no strikethrough (``strike="noStrike"``). For an explicit double strikethrough assign the
+        string ``"dblStrike"``; reading a double-strikethrough run returns |True|.
+        """
+        strike = self._rPr.strike
+        if strike is None:
+            return None
+        return strike != "noStrike"
+
+    @strikethrough.setter
+    def strikethrough(self, value: bool | str | None):
+        if value is True:
+            value = "sngStrike"
+        elif value is False:
+            value = "noStrike"
+        self._rPr.strike = value
+
+    @property
+    def superscript(self) -> bool | None:
+        """Get or set whether this |Font| is rendered as superscript.
+
+        Value is |True|, |False|, or |None|. |None| (default) means no explicit baseline offset is
+        present. |True| raises the text (``baseline="30000"``, i.e. 30%); |False| removes any
+        offset. Setting |True| clears any subscript and vice-versa. For a custom offset assign a
+        percentage to :attr:`baseline` directly via the underlying element.
+        """
+        baseline = self._rPr.baseline
+        if baseline is None:
+            return None
+        return baseline > 0
+
+    @superscript.setter
+    def superscript(self, value: bool | None):
+        if value is True:
+            self._rPr.baseline = 0.30
+        elif value is False:
+            self._rPr.baseline = None
+        else:
+            self._rPr.baseline = value
+
+    @property
+    def subscript(self) -> bool | None:
+        """Get or set whether this |Font| is rendered as subscript.
+
+        Value is |True|, |False|, or |None|. |None| (default) means no explicit baseline offset is
+        present. |True| lowers the text (``baseline="-25000"``, i.e. -25%); |False| removes any
+        offset.
+        """
+        baseline = self._rPr.baseline
+        if baseline is None:
+            return None
+        return baseline < 0
+
+    @subscript.setter
+    def subscript(self, value: bool | None):
+        if value is True:
+            self._rPr.baseline = -0.25
+        elif value is False:
+            self._rPr.baseline = None
+        else:
+            self._rPr.baseline = value
+
 
 class _Hyperlink(Subshape):
     """Text run hyperlink object.
@@ -493,6 +562,17 @@ class _Paragraph(Subshape):
     @alignment.setter
     def alignment(self, value: PP_PARAGRAPH_ALIGNMENT | None):
         self._pPr.algn = value
+
+    @property
+    def bullet(self) -> _Bullet:
+        """A |_Bullet| object providing control over this paragraph's bullet.
+
+        Use it to turn the bullet off (``paragraph.bullet.none()``), set a character/glyph bullet
+        (``paragraph.bullet.character("•")``), or an auto-numbered bullet
+        (``paragraph.bullet.auto_number("arabicPeriod")``), optionally styling the bullet font,
+        color, and size independently of the text.
+        """
+        return _Bullet(self._pPr)
 
     def clear(self):
         """Remove all content from this paragraph.
@@ -630,6 +710,110 @@ class _Paragraph(Subshape):
         Causes the element to be added if not present.
         """
         return self._p.get_or_add_pPr()
+
+
+class _Bullet(object):
+    """Provides access to the bullet settings of a paragraph.
+
+    Corresponds to the bullet-related child elements of the `a:pPr` element (`a:buNone`,
+    `a:buChar`, `a:buAutoNum`, plus the `a:buFont`, `a:buClr`, and `a:buSzPct` styling elements).
+    These three bullet kinds are mutually exclusive; setting one removes any other.
+    """
+
+    def __init__(self, pPr: CT_TextParagraphProperties):
+        self._pPr = pPr
+
+    @property
+    def type(self) -> str | None:
+        """One of ``"none"``, ``"character"``, ``"auto_number"``, or |None| if not set here.
+
+        |None| indicates no explicit bullet setting on this paragraph; the value is inherited from
+        the style hierarchy.
+        """
+        if self._pPr.buNone is not None:
+            return "none"
+        if self._pPr.buChar is not None:
+            return "character"
+        if self._pPr.buAutoNum is not None:
+            return "auto_number"
+        return None
+
+    @property
+    def char(self) -> str | None:
+        """The bullet glyph when a character bullet is set, else |None|."""
+        buChar = self._pPr.buChar
+        return None if buChar is None else buChar.char
+
+    @property
+    def number_type(self) -> str | None:
+        """The auto-number scheme (e.g. ``"arabicPeriod"``) when set, else |None|."""
+        buAutoNum = self._pPr.buAutoNum
+        return None if buAutoNum is None else buAutoNum.type
+
+    def none(self) -> None:
+        """Explicitly suppress the bullet for this paragraph (inserts `a:buNone`)."""
+        self._clear_kind()
+        self._pPr.get_or_add_buNone()
+
+    def character(
+        self,
+        char: str = "•",
+        *,
+        font: str | None = None,
+        color: str | None = None,
+        size_pct: float | None = None,
+    ) -> None:
+        """Set a character (glyph) bullet, e.g. ``"•"`` (the default), ``"–"``, ``"▪"``.
+
+        `font` is a typeface name for the bullet glyph (commonly ``"Arial"`` or ``"Wingdings"``).
+        `color` is an RRGGBB hex string. `size_pct` sizes the bullet relative to the text, e.g.
+        ``80`` for 80% (range 25–400).
+        """
+        self._clear_kind()
+        self._apply_style(font, color, size_pct)
+        self._pPr.get_or_add_buChar().char = char
+
+    def auto_number(
+        self,
+        number_type: str = "arabicPeriod",
+        *,
+        start_at: int | None = None,
+        font: str | None = None,
+        color: str | None = None,
+        size_pct: float | None = None,
+    ) -> None:
+        """Set an automatically-numbered bullet.
+
+        `number_type` is an OOXML auto-number scheme such as ``"arabicPeriod"`` (``1.``),
+        ``"arabicParenR"`` (``1)``), ``"romanLcPeriod"`` (``i.``), or ``"alphaUcPeriod"`` (``A.``).
+        `start_at` overrides the starting number. `font`, `color`, and `size_pct` style the marker
+        as in :meth:`character`.
+        """
+        self._clear_kind()
+        self._apply_style(font, color, size_pct)
+        buAutoNum = self._pPr.get_or_add_buAutoNum()
+        buAutoNum.type = number_type
+        if start_at is not None:
+            buAutoNum.startAt = start_at
+
+    def _apply_style(self, font: str | None, color: str | None, size_pct: float | None) -> None:
+        if size_pct is not None:
+            self._pPr._remove_buSzPct()  # pyright: ignore[reportPrivateUsage]
+            self._pPr.get_or_add_buSzPct().val = size_pct / 100.0
+        if color is not None:
+            buClr = self._pPr.get_or_add_buClr()
+            for child in list(buClr):
+                buClr.remove(child)
+            buClr.append(parse_xml(f'<a:srgbClr {nsdecls("a")} val="{color}"/>'))
+        if font is not None:
+            self._pPr._remove_buFont()  # pyright: ignore[reportPrivateUsage]
+            self._pPr.get_or_add_buFont().typeface = font
+
+    def _clear_kind(self) -> None:
+        """Remove whichever of the three mutually-exclusive bullet-kind elements is present."""
+        self._pPr._remove_buNone()  # pyright: ignore[reportPrivateUsage]
+        self._pPr._remove_buChar()  # pyright: ignore[reportPrivateUsage]
+        self._pPr._remove_buAutoNum()  # pyright: ignore[reportPrivateUsage]
 
 
 class _Run(Subshape):
