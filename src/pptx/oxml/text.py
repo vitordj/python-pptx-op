@@ -18,6 +18,7 @@ from pptx.oxml.dml.fill import CT_GradientFillProperties
 from pptx.oxml.ns import nsdecls
 from pptx.oxml.simpletypes import (
     ST_Coordinate32,
+    ST_Percentage,
     ST_TextFontScalePercentOrPercentString,
     ST_TextFontSize,
     ST_TextIndentLevelType,
@@ -26,6 +27,8 @@ from pptx.oxml.simpletypes import (
     ST_TextTypeface,
     ST_TextWrappingType,
     XsdBoolean,
+    XsdInt,
+    XsdString,
 )
 from pptx.oxml.xmlchemy import (
     BaseOxmlElement,
@@ -325,6 +328,12 @@ class CT_TextCharacterProperties(BaseOxmlElement):
     u: MSO_TEXT_UNDERLINE_TYPE | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
         "u", MSO_TEXT_UNDERLINE_TYPE
     )
+    strike: str | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "strike", XsdString
+    )
+    baseline: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "baseline", ST_Percentage
+    )
 
     def _new_gradFill(self):
         return CT_GradientFillProperties.new_gradFill()
@@ -366,6 +375,27 @@ class CT_TextFont(BaseOxmlElement):
     typeface: str = RequiredAttribute(  # pyright: ignore[reportAssignmentType]
         "typeface", ST_TextTypeface
     )
+
+
+class CT_TextCharBullet(BaseOxmlElement):
+    """`a:buChar` element, a character (glyph) bullet."""
+
+    char: str = RequiredAttribute("char", XsdString)  # pyright: ignore[reportAssignmentType]
+
+
+class CT_TextAutonumberBullet(BaseOxmlElement):
+    """`a:buAutoNum` element, an automatically-numbered bullet."""
+
+    type: str = RequiredAttribute("type", XsdString)  # pyright: ignore[reportAssignmentType]
+    startAt: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "startAt", XsdInt
+    )
+
+
+class CT_TextBulletSizePercent(BaseOxmlElement):
+    """`a:buSzPct` element, bullet size as a percentage of the text size."""
+
+    val: int = RequiredAttribute("val", ST_Percentage)  # pyright: ignore[reportAssignmentType]
 
 
 class CT_TextLineBreak(BaseOxmlElement):
@@ -500,6 +530,24 @@ class CT_TextParagraphProperties(BaseOxmlElement):
     )
     defRPr: CT_TextCharacterProperties | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
         "a:defRPr", successors=_tag_seq[16:]
+    )
+    buClr: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buClr", successors=_tag_seq[5:]
+    )
+    buSzPct: CT_TextBulletSizePercent | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buSzPct", successors=_tag_seq[7:]
+    )
+    buFont: CT_TextFont | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buFont", successors=_tag_seq[10:]
+    )
+    buNone: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buNone", successors=_tag_seq[11:]
+    )
+    buAutoNum: CT_TextAutonumberBullet | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buAutoNum", successors=_tag_seq[12:]
+    )
+    buChar: CT_TextCharBullet | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buChar", successors=_tag_seq[13:]
     )
     lvl: int = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
         "lvl", ST_TextIndentLevelType, default=0
