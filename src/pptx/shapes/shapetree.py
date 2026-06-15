@@ -38,7 +38,8 @@ from pptx.util import Emu, lazyproperty
 if TYPE_CHECKING:
     from pptx.chart.chart import Chart
     from pptx.chart.data import ChartData
-    from pptx.enum.chart import XL_CHART_TYPE
+    from pptx.chartex.data import ChartExData
+    from pptx.enum.chart import XL_CHART_EX_TYPE, XL_CHART_TYPE
     from pptx.enum.shapes import MSO_CONNECTOR_TYPE, MSO_SHAPE
     from pptx.oxml.shapes import ShapeElement
     from pptx.oxml.shapes.connector import CT_Connector
@@ -257,6 +258,30 @@ class _BaseGroupShapes(_BaseShapes):
         self._recalculate_extents()
         return cast("Chart", self._shape_factory(graphicFrame))
 
+    def add_chartex(
+        self,
+        chart_type: "XL_CHART_EX_TYPE",
+        x: Length,
+        y: Length,
+        cx: Length,
+        cy: Length,
+        chart_data: "ChartExData",
+    ) -> "GraphicFrame":
+        """Add a new chartEx (Office 2016 "modern") chart to the slide.
+
+        `chart_type` is one of the :ref:`XL_CHART_EX_TYPE` enumeration values (waterfall,
+        treemap, funnel, etc.). `chart_data` is a |ChartExData| object. The chart is
+        positioned at (`x`, `y`) with size (`cx`, `cy`).
+
+        Returns the |GraphicFrame| shape containing the chart. These charts use the
+        ``cx:`` schema and have no |Chart|-style read/write API; they are created
+        write-only.
+        """
+        rId = self.part.add_chartex_part(chart_type, chart_data)
+        graphicFrame = self._add_chartex_graphicFrame(rId, x, y, cx, cy)
+        self._recalculate_extents()
+        return cast("GraphicFrame", self._shape_factory(graphicFrame))
+
     def add_connector(
         self,
         connector_type: MSO_CONNECTOR_TYPE,
@@ -437,6 +462,22 @@ class _BaseGroupShapes(_BaseShapes):
         shape_id = self._next_shape_id
         name = "Chart %d" % (shape_id - 1)
         graphicFrame = CT_GraphicalObjectFrame.new_chart_graphicFrame(
+            shape_id, name, rId, x, y, cx, cy
+        )
+        self._spTree.append(graphicFrame)
+        return graphicFrame
+
+    def _add_chartex_graphicFrame(
+        self, rId: str, x: Length, y: Length, cx: Length, cy: Length
+    ) -> CT_GraphicalObjectFrame:
+        """Return new `p:graphicFrame` element appended to this shape tree.
+
+        The `p:graphicFrame` element has the specified position and size and refers to
+        the chartEx part identified by `rId`.
+        """
+        shape_id = self._next_shape_id
+        name = "Chart %d" % (shape_id - 1)
+        graphicFrame = CT_GraphicalObjectFrame.new_chartex_graphicFrame(
             shape_id, name, rId, x, y, cx, cy
         )
         self._spTree.append(graphicFrame)
