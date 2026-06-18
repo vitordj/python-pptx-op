@@ -4,13 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Iterator, cast
 
+from pptx.dml.color import RGBColor
 from pptx.dml.fill import FillFormat
 from pptx.enum.dml import MSO_FILL
 from pptx.enum.lang import MSO_LANGUAGE_ID
 from pptx.enum.text import MSO_AUTO_SIZE, MSO_UNDERLINE, MSO_VERTICAL_ANCHOR
 from pptx.opc.constants import RELATIONSHIP_TYPE as RT
 from pptx.oxml import parse_xml
-from pptx.oxml.ns import nsdecls
+from pptx.oxml.ns import nsdecls, qn
 from pptx.oxml.simpletypes import ST_TextWrappingType
 from pptx.shapes import Subshape
 from pptx.text.fonts import FontFiles
@@ -489,6 +490,67 @@ class Font(object):
             self._rPr.baseline = None
         else:
             self._rPr.baseline = value
+
+    @property
+    def spacing(self) -> Length | None:
+        """Inter-character spacing (tracking) for this |Font|, as a |Length|.
+
+        Read/write. |None| (default) inherits the setting from the style hierarchy. A positive
+        value expands the spacing between characters, a negative value condenses it, e.g.
+        `font.spacing = Pt(1.5)`. Corresponds to the `a:rPr@spc` attribute.
+        """
+        spc = self._rPr.spc
+        if spc is None:
+            return None
+        return Centipoints(spc)
+
+    @spacing.setter
+    def spacing(self, value: Length | None):
+        if value is None:
+            self._rPr.spc = None
+        else:
+            self._rPr.spc = Emu(value).centipoints
+
+    @property
+    def caps(self) -> str | None:
+        """Capitalization effect for this |Font|.
+
+        Read/write. One of ``"all"`` (all-caps), ``"small"`` (small-caps), ``"none"`` (explicitly
+        no caps effect), or |None| (default, inherit from the style hierarchy). Corresponds to the
+        `a:rPr@cap` attribute.
+        """
+        return self._rPr.cap
+
+    @caps.setter
+    def caps(self, value: str | None):
+        if value not in (None, "none", "small", "all"):
+            raise ValueError("caps must be one of 'all', 'small', 'none', or None")
+        self._rPr.cap = value
+
+    @property
+    def highlight_color(self) -> RGBColor | None:
+        """Text highlight (marker) color for this |Font| as an |RGBColor|, or |None|.
+
+        Read/write. |None| (default) means no highlight is applied. Assign an |RGBColor| to apply a
+        highlight, or |None| to remove it. Corresponds to the `a:rPr/a:highlight/a:srgbClr`
+        element.
+        """
+        highlight = self._rPr.highlight
+        if highlight is None:
+            return None
+        srgbClr = highlight.find(qn("a:srgbClr"))
+        if srgbClr is None:
+            return None
+        return RGBColor.from_string(srgbClr.get("val"))
+
+    @highlight_color.setter
+    def highlight_color(self, value: RGBColor | None):
+        if value is None:
+            self._rPr._remove_highlight()  # pyright: ignore[reportPrivateUsage]
+            return
+        highlight = self._rPr.get_or_add_highlight()
+        srgbClr = highlight.get_or_change_to_srgbClr()
+        srgbClr.val = str(value)
 
 
 class _Hyperlink(Subshape):

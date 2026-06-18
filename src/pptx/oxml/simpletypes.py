@@ -736,6 +736,26 @@ class ST_TextSpacingPoint(BaseIntType):
         cls.validate_int_in_range(value, 0, 20116800)
 
 
+class ST_TextPoint(BaseIntType):
+    """Character spacing value in `a:rPr@spc`, in centipoints (1/100 pt).
+
+    Unlike `ST_TextSpacingPoint`, negative values are valid (condensed spacing). Range is
+    -400000..400000 centipoints (-4000pt..4000pt).
+    """
+
+    @classmethod
+    def convert_from_xml(cls, str_value):
+        return int(str_value)
+
+    @classmethod
+    def convert_to_xml(cls, value):
+        return str(int(value))
+
+    @classmethod
+    def validate(cls, value):
+        cls.validate_int_in_range(value, -400000, 400000)
+
+
 class ST_TextTypeface(XsdString):
     pass
 
