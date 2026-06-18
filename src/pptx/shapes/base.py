@@ -123,6 +123,22 @@ class BaseShape(object):
         self._element.x = value
 
     @property
+    def alt_text(self) -> str:
+        """Alt text description for screen readers and export accessibility.
+
+        Returns an empty string when no description has been set. Assigning an
+        empty string clears the attribute from the XML (same as PowerPoint).
+        """
+        cNvPr = self._element._nvXxPr.cNvPr  # pyright: ignore[reportPrivateUsage]
+        descr = cNvPr.descr
+        return "" if descr is None else descr
+
+    @alt_text.setter
+    def alt_text(self, value: str):
+        cNvPr = self._element._nvXxPr.cNvPr  # pyright: ignore[reportPrivateUsage]
+        cNvPr.descr = value if value else None
+
+    @property
     def name(self) -> str:
         """Name of this shape, e.g. 'Picture 7'."""
         return self._element.shape_name
