@@ -194,6 +194,43 @@ class Picture(_BasePicture):
         """Unconditionally `MSO_SHAPE_TYPE.PICTURE` in this case."""
         return MSO_SHAPE_TYPE.PICTURE
 
+    @property
+    def transparency(self) -> float:
+        """Image transparency as a float in the range 0.0–1.0.
+
+        0.0 is fully opaque (default), 1.0 is fully transparent.
+        Backed by ``a:blip/a:alphaModFix@amt`` (OOXML fraction where
+        1.0 = 100% opacity, so ``transparency = 1 − amt``).
+
+        Example::
+
+            picture.transparency = 0.5  # 50% transparent
+        """
+        blip = self._blip
+        if blip is None:
+            return 0.0
+        alphaModFix = blip.alphaModFix
+        if alphaModFix is None:
+            return 0.0
+        return 1.0 - alphaModFix.amt
+
+    @transparency.setter
+    def transparency(self, value: float):
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"transparency must be between 0.0 and 1.0, got {value!r}")
+        blip = self._blip
+        if blip is None:
+            return
+        if value == 0.0:
+            blip._remove_alphaModFix()  # pyright: ignore[reportPrivateUsage]
+            return
+        blip.get_or_add_alphaModFix().amt = 1.0 - value
+
+    @property
+    def _blip(self):
+        """The `a:blip` element for this picture, or None."""
+        return self._pic.blipFill.blip
+
 
 class _MediaFormat(ParentedElementProxy):
     """Provides access to formatting properties for a Media object.
