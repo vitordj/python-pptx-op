@@ -799,6 +799,28 @@ class ST_TextPoint(BaseIntType):
         cls.validate_int_in_range(value, -400000, 400000)
 
 
+class ST_TextIndent(BaseIntType):
+    """100ths of a point; used for a:pPr@marL, @marR, and @indent attributes.
+
+    marL/marR are non-negative; indent can be negative (hanging indent).
+    OOXML range: -158400..914400 centipoints → -20116800..116128800 EMU.
+    Validation is performed in EMU (the unit of values passed at runtime).
+    """
+
+    @classmethod
+    def convert_from_xml(cls, str_value):
+        return Centipoints(int(str_value))
+
+    @classmethod
+    def convert_to_xml(cls, value):
+        length = Emu(value)
+        return str(length.centipoints)
+
+    @classmethod
+    def validate(cls, value):
+        cls.validate_int_in_range(value, -20116800, 116128800)
+
+
 class ST_TextTypeface(XsdString):
     pass
 
