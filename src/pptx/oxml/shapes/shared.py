@@ -12,6 +12,10 @@ from pptx.oxml.simpletypes import (
     ST_Coordinate,
     ST_Direction,
     ST_DrawingElementId,
+    ST_LineCap,
+    ST_LineEndLength,
+    ST_LineEndType,
+    ST_LineEndWidth,
     ST_LineWidth,
     ST_PlaceholderSize,
     ST_PositiveCoordinate,
@@ -264,8 +268,11 @@ class CT_LineProperties(BaseOxmlElement):
     )
     prstDash = ZeroOrOne("a:prstDash", successors=_tag_seq[5:])
     custDash = ZeroOrOne("a:custDash", successors=_tag_seq[6:])
+    headEnd = ZeroOrOne("a:headEnd", successors=_tag_seq[10:])
+    tailEnd = ZeroOrOne("a:tailEnd", successors=_tag_seq[11:])
     del _tag_seq
     w = OptionalAttribute("w", ST_LineWidth, default=Emu(0))
+    cap: str | None = OptionalAttribute("cap", ST_LineCap)  # pyright: ignore[reportAssignmentType]
 
     @property
     def eg_fillProperties(self):
@@ -290,6 +297,18 @@ class CT_LineProperties(BaseOxmlElement):
         self._remove_custDash()
         prstDash = self.get_or_add_prstDash()
         prstDash.val = val
+
+
+class CT_LineEndProperties(BaseOxmlElement):
+    """Custom element class for `a:headEnd` and `a:tailEnd` (line/arrow ends)."""
+
+    type: str | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "type", ST_LineEndType
+    )
+    w: str | None = OptionalAttribute("w", ST_LineEndWidth)  # pyright: ignore[reportAssignmentType]
+    len: str | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "len", ST_LineEndLength
+    )
 
 
 class CT_NonVisualDrawingProps(BaseOxmlElement):
