@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Callable
+
 from pptx.enum.dml import MSO_PATTERN_TYPE
 from pptx.oxml import parse_xml
 from pptx.oxml.ns import nsdecls
@@ -22,11 +24,27 @@ from pptx.oxml.xmlchemy import (
 )
 
 
-class CT_Blip(BaseOxmlElement):
-    """
-    <a:blip> element
+class CT_AlphaModFix(BaseOxmlElement):
+    """`a:alphaModFix` element — scales the alpha (opacity) of each pixel.
+
+    `@amt` is a fraction (0.0 fully transparent … 1.0 fully opaque).
+    Absence of the element means 100% opacity (no change).
     """
 
+    amt: float = RequiredAttribute(  # pyright: ignore[reportAssignmentType]
+        "amt", ST_PositiveFixedPercentage
+    )
+
+
+class CT_Blip(BaseOxmlElement):
+    """`a:blip` custom element class."""
+
+    get_or_add_alphaModFix: "Callable[[], CT_AlphaModFix]"
+    _remove_alphaModFix: "Callable[[], None]"
+
+    alphaModFix: "CT_AlphaModFix | None" = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:alphaModFix", successors=("a:extLst",)
+    )
     rEmbed = OptionalAttribute("r:embed", ST_RelationshipId)
 
 
