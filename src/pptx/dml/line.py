@@ -19,6 +19,15 @@ class LineFormat(object):
         self._parent = parent
 
     @lazyproperty
+    def begin_arrow(self):
+        """A |_LineEndFormat| controlling the arrow head at the *start* of this line.
+
+        Corresponds to the `a:headEnd` child of `a:ln`. Use it to set the head's `.type`,
+        `.width`, and `.length`, e.g. ``line.begin_arrow.type = "triangle"``.
+        """
+        return _LineEndFormat(self, "headEnd")
+
+    @lazyproperty
     def color(self):
         """
         The |ColorFormat| instance that provides access to the color settings
@@ -31,6 +40,31 @@ class LineFormat(object):
         if self.fill.type != MSO_FILL.SOLID:
             self.fill.solid()
         return self.fill.fore_color
+
+    @property
+    def cap(self):
+        """The line end-cap style, or |None| if not set explicitly.
+
+        One of ``"rnd"`` (round), ``"sq"`` (square), or ``"flat"``. Corresponds to the `a:ln@cap`
+        attribute. Assigning |None| removes any explicit setting.
+        """
+        ln = self._ln
+        if ln is None:
+            return None
+        return ln.cap
+
+    @cap.setter
+    def cap(self, value):
+        self._get_or_add_ln().cap = value
+
+    @lazyproperty
+    def end_arrow(self):
+        """A |_LineEndFormat| controlling the arrow head at the *end* of this line.
+
+        Corresponds to the `a:tailEnd` child of `a:ln`. Use it to set the head's `.type`,
+        `.width`, and `.length`, e.g. ``line.end_arrow.type = "arrow"``.
+        """
+        return _LineEndFormat(self, "tailEnd")
 
     @property
     def dash_style(self):
@@ -98,3 +132,69 @@ class LineFormat(object):
     @property
     def _ln(self):
         return self._parent.ln
+
+
+class _LineEndFormat(object):
+    """Provides access to the arrow-head settings at one end of a line.
+
+    `end` is ``"headEnd"`` for the start of the line or ``"tailEnd"`` for its end. Reached via
+    ``line.begin_arrow`` and ``line.end_arrow``.
+    """
+
+    def __init__(self, line, end):
+        super(_LineEndFormat, self).__init__()
+        self._line = line
+        self._end = end  # "headEnd" or "tailEnd"
+
+    @property
+    def type(self):
+        """Arrow-head shape, one of ``"none"``, ``"triangle"``, ``"stealth"``, ``"diamond"``,
+        ``"oval"``, ``"arrow"``, or |None| if not set."""
+        return self._get("type")
+
+    @type.setter
+    def type(self, value):
+        self._set("type", value)
+
+    @property
+    def width(self):
+        """Arrow-head width, one of ``"sm"``, ``"med"``, ``"lg"``, or |None| if not set."""
+        return self._get("w")
+
+    @width.setter
+    def width(self, value):
+        self._set("w", value)
+
+    @property
+    def length(self):
+        """Arrow-head length, one of ``"sm"``, ``"med"``, ``"lg"``, or |None| if not set."""
+        return self._get("len")
+
+    @length.setter
+    def length(self, value):
+        self._set("len", value)
+
+    def remove(self):
+        """Remove the arrow-head element from the line entirely."""
+        ln = self._line._ln
+        if ln is None:
+            return
+        getattr(ln, "_remove_%s" % self._end)()
+
+    def _end_elm(self, create):
+        if create:
+            ln = self._line._get_or_add_ln()
+            return getattr(ln, "get_or_add_%s" % self._end)()
+        ln = self._line._ln
+        if ln is None:
+            return None
+        return getattr(ln, self._end)
+
+    def _get(self, attr):
+        end_elm = self._end_elm(create=False)
+        if end_elm is None:
+            return None
+        return getattr(end_elm, attr)
+
+    def _set(self, attr, value):
+        setattr(self._end_elm(create=True), attr, value)

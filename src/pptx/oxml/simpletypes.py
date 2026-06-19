@@ -494,6 +494,49 @@ class ST_LineWidth(XsdInt):
             )
 
 
+class ST_LineEndType(XsdTokenEnumeration):
+    """Valid values for the `type` attribute of `a:headEnd`/`a:tailEnd` (arrow head shape)."""
+
+    NONE = "none"
+    TRIANGLE = "triangle"
+    STEALTH = "stealth"
+    DIAMOND = "diamond"
+    OVAL = "oval"
+    ARROW = "arrow"
+
+    _members = (NONE, TRIANGLE, STEALTH, DIAMOND, OVAL, ARROW)
+
+
+class ST_LineEndWidth(XsdTokenEnumeration):
+    """Valid values for the `w` attribute of `a:headEnd`/`a:tailEnd` (arrow head width)."""
+
+    SMALL = "sm"
+    MEDIUM = "med"
+    LARGE = "lg"
+
+    _members = (SMALL, MEDIUM, LARGE)
+
+
+class ST_LineEndLength(XsdTokenEnumeration):
+    """Valid values for the `len` attribute of `a:headEnd`/`a:tailEnd` (arrow head length)."""
+
+    SMALL = "sm"
+    MEDIUM = "med"
+    LARGE = "lg"
+
+    _members = (SMALL, MEDIUM, LARGE)
+
+
+class ST_LineCap(XsdTokenEnumeration):
+    """Valid values for the `cap` attribute of `a:ln` (line end-cap style)."""
+
+    ROUND = "rnd"
+    SQUARE = "sq"
+    FLAT = "flat"
+
+    _members = (ROUND, SQUARE, FLAT)
+
+
 class ST_MarkerSize(XsdUnsignedByte):
     @classmethod
     def validate(cls, value):
