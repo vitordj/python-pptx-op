@@ -670,6 +670,60 @@ class _Paragraph(Subshape):
         self._pPr.lvl = level
 
     @property
+    def margin_left(self) -> Length | None:
+        """Left indent of this paragraph as a |Length| value, or |None|.
+
+        Measured from the text frame's left inset. Use |Pt| for convenient
+        assignment, e.g. ``paragraph.margin_left = Pt(36)``.  Setting to
+        |None| removes the explicit value (inherits from style hierarchy).
+        Corresponds to ``a:pPr@marL``.
+        """
+        pPr = self._p.pPr
+        if pPr is None:
+            return None
+        return pPr.marL
+
+    @margin_left.setter
+    def margin_left(self, value: Length | None):
+        pPr = self._p.get_or_add_pPr()
+        pPr.marL = value
+
+    @property
+    def margin_right(self) -> Length | None:
+        """Right indent of this paragraph as a |Length| value, or |None|.
+
+        Corresponds to ``a:pPr@marR``.
+        """
+        pPr = self._p.pPr
+        if pPr is None:
+            return None
+        return pPr.marR
+
+    @margin_right.setter
+    def margin_right(self, value: Length | None):
+        pPr = self._p.get_or_add_pPr()
+        pPr.marR = value
+
+    @property
+    def first_line_indent(self) -> Length | None:
+        """First-line indent offset from ``margin_left``, as a |Length| or |None|.
+
+        A positive value indents the first line further; a negative value
+        creates a hanging indent (first line protrudes left of the margin).
+        Use ``Pt(-18)`` for a typical hanging indent. Corresponds to
+        ``a:pPr@indent``.
+        """
+        pPr = self._p.pPr
+        if pPr is None:
+            return None
+        return pPr.indent
+
+    @first_line_indent.setter
+    def first_line_indent(self, value: Length | None):
+        pPr = self._p.get_or_add_pPr()
+        pPr.indent = value
+
+    @property
     def line_spacing(self) -> int | float | Length | None:
         """The space between baselines in successive lines of this paragraph.
 
