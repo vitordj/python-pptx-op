@@ -250,6 +250,13 @@ register_element_cls("a:srgbClr", CT_SRgbColor)
 register_element_cls("a:sysClr", CT_SystemColor)
 
 
+from pptx.oxml.dml.effect import CT_EffectList, CT_OuterShadow, CT_SoftEdge  # noqa: E402
+
+register_element_cls("a:effectLst", CT_EffectList)
+register_element_cls("a:outerShdw", CT_OuterShadow)
+register_element_cls("a:softEdge", CT_SoftEdge)
+
+
 from pptx.oxml.dml.fill import (  # noqa: E402
     CT_Blip,
     CT_BlipFillProperties,
