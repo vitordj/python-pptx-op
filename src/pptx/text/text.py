@@ -8,7 +8,7 @@ from pptx.dml.color import RGBColor
 from pptx.dml.fill import FillFormat
 from pptx.enum.dml import MSO_FILL
 from pptx.enum.lang import MSO_LANGUAGE_ID
-from pptx.enum.text import MSO_AUTO_SIZE, MSO_UNDERLINE, MSO_VERTICAL_ANCHOR
+from pptx.enum.text import MSO_AUTO_SIZE, MSO_TEXT_DIRECTION, MSO_UNDERLINE, MSO_VERTICAL_ANCHOR
 from pptx.opc.constants import RELATIONSHIP_TYPE as RT
 from pptx.oxml import parse_xml
 from pptx.oxml.ns import nsdecls, qn
@@ -179,6 +179,24 @@ class TextFrame(Subshape):
         for p_text in text.split("\n"):
             p = txBody.add_p()
             p.append_text(p_text)
+
+    @property
+    def text_direction(self) -> MSO_TEXT_DIRECTION | None:
+        """Direction of text flow in this text frame.
+
+        A member of :class:`.MSO_TEXT_DIRECTION` or |None|. |None| indicates the effective value
+        is inherited from the style hierarchy. Corresponds to ``a:bodyPr@vert``.
+
+        Example::
+
+            from pptx.enum.text import MSO_TEXT_DIRECTION
+            tf.text_direction = MSO_TEXT_DIRECTION.VERTICAL
+        """
+        return self._txBody.bodyPr.vert
+
+    @text_direction.setter
+    def text_direction(self, value: MSO_TEXT_DIRECTION | None):
+        self._txBody.bodyPr.vert = value
 
     @property
     def vertical_anchor(self) -> MSO_VERTICAL_ANCHOR | None:
