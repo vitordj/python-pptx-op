@@ -174,6 +174,37 @@ class MSO_VERTICAL_ANCHOR(BaseXmlEnum):
 MSO_ANCHOR = MSO_VERTICAL_ANCHOR
 
 
+class MSO_TEXT_DIRECTION(BaseXmlEnum):
+    """Specifies the direction of text flow in a text frame.
+
+    Used with :attr:`.TextFrame.text_direction`. |None| may be assigned to remove an
+    explicitly-set direction, causing the value to be inherited from the style hierarchy.
+
+    Corresponds to the ``a:bodyPr@vert`` XML attribute (ST_TextVerticalType).
+    """
+
+    HORIZONTAL = (1, "horz", "Horizontal text flow (the default).")
+    """Horizontal text flow (the default)."""
+
+    VERTICAL = (2, "vert", "Vertical text flow, characters rotated 90° clockwise.")
+    """Vertical text flow, characters rotated 90° clockwise."""
+
+    VERTICAL_270 = (3, "vert270", "Vertical text flow, characters rotated 270° clockwise.")
+    """Vertical text flow, characters rotated 270° clockwise."""
+
+    EAST_ASIAN_VERTICAL = (4, "eaVert", "East Asian vertical text flow.")
+    """East Asian vertical text flow."""
+
+    MONGOLIAN_VERTICAL = (5, "mongolianVert", "Mongolian vertical text flow.")
+    """Mongolian vertical text flow."""
+
+    WORD_ART_VERTICAL = (6, "wordArtVert", "WordArt-style vertical text flow.")
+    """WordArt-style vertical text flow."""
+
+    WORD_ART_VERTICAL_RTL = (7, "wordArtVertRtl", "WordArt-style vertical right-to-left text flow.")
+    """WordArt-style vertical right-to-left text flow."""
+
+
 class PP_PARAGRAPH_ALIGNMENT(BaseXmlEnum):
     """Specifies the horizontal alignment for one or more paragraphs.
 

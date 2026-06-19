@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Callable, cast
 from pptx.enum.lang import MSO_LANGUAGE_ID
 from pptx.enum.text import (
     MSO_AUTO_SIZE,
+    MSO_TEXT_DIRECTION,
     MSO_TEXT_UNDERLINE_TYPE,
     MSO_VERTICAL_ANCHOR,
     PP_PARAGRAPH_ALIGNMENT,
@@ -232,6 +233,9 @@ class CT_TextBodyProperties(BaseOxmlElement):
     )
     anchor: MSO_VERTICAL_ANCHOR | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
         "anchor", MSO_VERTICAL_ANCHOR
+    )
+    vert: MSO_TEXT_DIRECTION | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "vert", MSO_TEXT_DIRECTION
     )
     wrap: str | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
         "wrap", ST_TextWrappingType
