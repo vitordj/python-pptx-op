@@ -22,6 +22,7 @@ from pptx.oxml.simpletypes import (
     ST_TextFontScalePercentOrPercentString,
     ST_TextFontSize,
     ST_TextIndentLevelType,
+    ST_TextPoint,
     ST_TextSpacingPercentOrPercentString,
     ST_TextSpacingPoint,
     ST_TextTypeface,
@@ -313,6 +314,23 @@ class CT_TextCharacterProperties(BaseOxmlElement):
             "a:extLst",
         ),
     )
+    highlight: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:highlight",
+        successors=(
+            "a:uLnTx",
+            "a:uLn",
+            "a:uFillTx",
+            "a:uFill",
+            "a:latin",
+            "a:ea",
+            "a:cs",
+            "a:sym",
+            "a:hlinkClick",
+            "a:hlinkMouseOver",
+            "a:rtl",
+            "a:extLst",
+        ),
+    )
     hlinkClick: CT_Hyperlink | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
         "a:hlinkClick", successors=("a:hlinkMouseOver", "a:rtl", "a:extLst")
     )
@@ -334,6 +352,10 @@ class CT_TextCharacterProperties(BaseOxmlElement):
     baseline: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
         "baseline", ST_Percentage
     )
+    spc: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
+        "spc", ST_TextPoint
+    )
+    cap: str | None = OptionalAttribute("cap", XsdString)  # pyright: ignore[reportAssignmentType]
 
     def _new_gradFill(self):
         return CT_GradientFillProperties.new_gradFill()
