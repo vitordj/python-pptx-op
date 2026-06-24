@@ -32,6 +32,17 @@ class ChartExData:
         self._categories: list[CategoryValue] = []
         self._series_name: str | None = None
         self._values: list[float] = []
+        # -- optional styling (consumed by the XML writer; None = writer default) --
+        #: per-point fill colors as hex strings ("92D050"); index-aligned with values.
+        self.point_colors: "list[str] | None" = None
+        #: indices marked as totals/subtotals (waterfall). None -> default (first+last).
+        self.subtotal_idxs: "list[int] | None" = None
+        #: value-axis number format code (e.g. "0.00%").
+        self.number_format: "str | None" = None
+        #: font applied to axis tick labels and data labels.
+        self.font_name: "str | None" = None
+        #: font size in points for axis tick labels and data labels.
+        self.font_size: "float | None" = None
 
     @property
     def categories(self) -> list[CategoryValue]:

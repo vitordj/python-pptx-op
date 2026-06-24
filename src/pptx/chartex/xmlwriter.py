@@ -53,12 +53,15 @@ class _LayoutSpec:
 def _waterfall_layout_pr(data: "ChartExData") -> str:
     """`cx:subtotals` marking which points are totals/subtotals.
 
-    By convention the first and last categories of a waterfall are totals (the opening
-    and closing balance). Callers needing finer control can post-process, but this
-    default matches the common "Anterior ... Total" shape used in practice.
+    If ``data.subtotal_idxs`` is set, exactly those indices are marked (e.g. ``[n-1]``
+    when only the closing bar is a total). Otherwise the first and last categories are
+    treated as totals -- the common "Anterior ... Total" shape.
     """
     n = len(data.values)
-    idxs = sorted({0, n - 1}) if n else []
+    if data.subtotal_idxs is not None:
+        idxs = sorted({i for i in data.subtotal_idxs if 0 <= i < n})
+    else:
+        idxs = sorted({0, n - 1}) if n else []
     inner = "".join(f'<cx:idx val="{i}"/>' for i in idxs)
     return f"<cx:subtotals>{inner}</cx:subtotals>"
 
@@ -161,24 +164,59 @@ class ChartExXmlWriter:
         return (
             f'<cx:series layoutId="{self._layout_id}" uniqueId="{{00000000-0000-0000-0000-000000000000}}">'
             f"<cx:tx><cx:txData><cx:v>{escape(self._data.series_name)}</cx:v></cx:txData></cx:tx>"
-            '<cx:dataLabels><cx:visibility seriesName="0" categoryName="0" value="1"/></cx:dataLabels>'
+            f"{self._data_pts_xml}"
+            f"<cx:dataLabels>{self._txpr_xml}<cx:visibility seriesName=\"0\" categoryName=\"0\" value=\"1\"/></cx:dataLabels>"
             '<cx:dataId val="0"/>'
             f"{layout_pr}"
             "</cx:series>"
         )
 
     @property
+    def _data_pts_xml(self) -> str:
+        """Per-point ``cx:dataPt`` fills (``data.point_colors``), e.g. green/red bars."""
+        colors = self._data.point_colors
+        if not colors:
+            return ""
+        return "".join(
+            f'<cx:dataPt idx="{i}"><cx:spPr><a:solidFill>'
+            f'<a:srgbClr val="{escape(str(c))}"/></a:solidFill></cx:spPr></cx:dataPt>'
+            for i, c in enumerate(colors)
+        )
+
+    @property
+    def _txpr_xml(self) -> str:
+        """``cx:txPr`` carrying the configured font; empty when no font is set."""
+        name, size = self._data.font_name, self._data.font_size
+        if not name and not size:
+            return ""
+        sz = f' sz="{int(round((size or 9) * 100))}"'
+        latin = f'<a:latin typeface="{escape(name)}"/>' if name else ""
+        return (
+            "<cx:txPr><a:bodyPr/><a:p>"
+            f"<a:pPr><a:defRPr{sz}>{latin}</a:defRPr></a:pPr>"
+            f"<a:endParaRPr{sz}>{latin}</a:endParaRPr>"
+            "</a:p></cx:txPr>"
+        )
+
+    @property
     def _axes_xml(self) -> str:
+        num_fmt = self._data.number_format
         parts: list[str] = []
         for axis_id, kind in enumerate(self._spec.axes):
             if kind == "val":
                 scaling = "<cx:valScaling/>"
+                # numFmt só faz sentido no eixo de valores
+                numfmt_xml = (
+                    f'<cx:numFmt formatCode="{escape(num_fmt)}" sourceLinked="0"/>'
+                    if num_fmt else ""
+                )
             else:
                 scaling = '<cx:catScaling gapWidth="0.5"/>'
+                numfmt_xml = ""
             parts.append(
                 f'<cx:axis id="{axis_id}">{scaling}'
                 "<cx:majorGridlines><cx:spPr><a:ln><a:noFill/></a:ln></cx:spPr></cx:majorGridlines>"
-                "<cx:tickLabels/></cx:axis>"
+                f"<cx:tickLabels/>{numfmt_xml}{self._txpr_xml}</cx:axis>"
             )
         return "".join(parts)
 
