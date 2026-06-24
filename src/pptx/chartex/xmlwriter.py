@@ -149,7 +149,7 @@ class ChartExXmlWriter:
     @property
     def _chart_xml(self) -> str:
         return (
-            "<cx:chart><cx:plotArea><cx:plotAreaRegion>"
+            "<cx:chart><cx:plotArea><cx:plotAreaRegion><cx:plotSurface/>"
             f"{self._series_xml}"
             "</cx:plotAreaRegion>"
             f"{self._axes_xml}"
@@ -162,7 +162,7 @@ class ChartExXmlWriter:
         if self._spec.layout_pr is not None:
             layout_pr = f"<cx:layoutPr>{self._spec.layout_pr(self._data)}</cx:layoutPr>"
         return (
-            f'<cx:series layoutId="{self._layout_id}" uniqueId="{{00000000-0000-0000-0000-000000000000}}">'
+            f'<cx:series layoutId="{self._layout_id}" uniqueId="{{00000000-0000-0000-0000-000000000000}}" formatIdx="0">'
             f"<cx:tx><cx:txData><cx:v>{escape(self._data.series_name)}</cx:v></cx:txData></cx:tx>"
             f"{self._data_pts_xml}"
             f"<cx:dataLabels>{self._txpr_xml}<cx:visibility seriesName=\"0\" categoryName=\"0\" value=\"1\"/></cx:dataLabels>"
@@ -191,10 +191,11 @@ class ChartExXmlWriter:
             return ""
         sz = f' sz="{int(round((size or 9) * 100))}"'
         latin = f'<a:latin typeface="{escape(name)}"/>' if name else ""
+        # smtId=4294967295 (0xFFFFFFFF) = "sem modificação de estilo", como o Aspose emite
         return (
             "<cx:txPr><a:bodyPr/><a:p>"
-            f"<a:pPr><a:defRPr{sz}>{latin}</a:defRPr></a:pPr>"
-            f"<a:endParaRPr{sz}>{latin}</a:endParaRPr>"
+            f'<a:pPr><a:defRPr{sz} smtId="4294967295">{latin}</a:defRPr></a:pPr>'
+            f'<a:endParaRPr{sz} smtId="4294967295">{latin}</a:endParaRPr>'
             "</a:p></cx:txPr>"
         )
 
@@ -216,6 +217,7 @@ class ChartExXmlWriter:
             parts.append(
                 f'<cx:axis id="{axis_id}">{scaling}'
                 "<cx:majorGridlines><cx:spPr><a:ln><a:noFill/></a:ln></cx:spPr></cx:majorGridlines>"
+                "<cx:minorGridlines><cx:spPr><a:ln><a:noFill/></a:ln></cx:spPr></cx:minorGridlines>"
                 f"<cx:tickLabels/>{numfmt_xml}{self._txpr_xml}</cx:axis>"
             )
         return "".join(parts)
