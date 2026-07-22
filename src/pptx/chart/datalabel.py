@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pptx.chart._scatter_label_layout import hybrid_cluster_offsets
+from pptx.oxml.ns import qn
 from pptx.text.text import Font, TextFrame
 from pptx.util import lazyproperty
 
@@ -138,6 +140,100 @@ class DataLabels(object):
     @show_value.setter
     def show_value(self, value):
         self._element.get_or_add_showVal().val = bool(value)
+
+
+class XyDataLabels(DataLabels):
+    """Data labels for an XY (scatter) series.
+
+    Extends |DataLabels| with cell-linked labels (Office 2013+): each label's
+    text is driven from the chart's worksheet, and any displaced label gets a
+    native leader line -- no manual text boxes or connectors on the slide.
+    """
+
+    def apply_hybrid_scatter_offsets(
+        self, labels, *, workbook_column=3, show_leader_lines=True, **offset_kwargs
+    ):
+        """Compute hybrid cluster offsets for this series and apply them.
+
+        Convenience wrapper that reads this series' X/Y values from the chart,
+        calls :func:`hybrid_cluster_offsets` (forwarding keywords such as
+        ``magnitude`` or ``cluster_eps`` in *offset_kwargs*), and hands the
+        result to :meth:`set_values_from_cells`.
+        """
+        ser = self._scatter_ser()
+        xs = self._point_values(ser.xVal)
+        ys = self._point_values(ser.yVal)
+        offsets = hybrid_cluster_offsets(xs, ys, labels, **offset_kwargs)
+        self.set_values_from_cells(
+            labels,
+            workbook_column=workbook_column,
+            layout_offsets=offsets,
+            show_leader_lines=show_leader_lines,
+        )
+
+    def set_values_from_cells(
+        self, labels, *, workbook_column=3, layout_offsets=None, show_leader_lines=True
+    ):
+        """Show *labels* as cell-linked scatter data labels.
+
+        *labels* must have one entry per data point. *layout_offsets*, when
+        provided, is a same-length sequence in which each item is either |None|
+        (let PowerPoint place that label automatically) or an ``(dx, dy)``
+        factorial offset; only the offset points receive an individual `c:dLbl`
+        with a leader line. Positive *dy* moves a label downward. *workbook_column*
+        (1-based) selects the worksheet column referenced by the label range.
+        """
+        labels = [str(label) for label in labels]
+        if not labels:
+            raise ValueError("labels must contain at least one label")
+        ser = self._scatter_ser()
+        point_count = ser.yVal_ptCount_val
+        if point_count and len(labels) != point_count:
+            raise ValueError(
+                "labels has %d entries but series has %d points" % (len(labels), point_count)
+            )
+        if layout_offsets is not None and len(layout_offsets) != len(labels):
+            raise ValueError("layout_offsets must be the same length as labels")
+
+        self._element.use_cell_range_labels(show_leader_lines=show_leader_lines)
+        ser.set_datalabels_range(self._range_ref(workbook_column, len(labels)), labels)
+
+        if layout_offsets is None:
+            return
+        for idx, offset in enumerate(layout_offsets):
+            if offset is None:
+                continue
+            x, y = float(offset[0]), float(offset[1])
+            if abs(x) < 1e-9 and abs(y) < 1e-9:
+                continue
+            self._element.add_cell_range_dLbl(idx, x, y, labels[idx])
+
+    @staticmethod
+    def _point_values(num_data_source):
+        """List of the float values cached in a `c:xVal`/`c:yVal` numeric source."""
+        if num_data_source is None:
+            return []
+        return [num_data_source.pt_v(idx) for idx in range(num_data_source.ptCount_val)]
+
+    @staticmethod
+    def _range_ref(column, count):
+        """Worksheet reference like ``Sheet1!$C$2:$C${count+1}`` for *column*."""
+        letters = ""
+        col = column
+        while col:
+            col, rem = divmod(col - 1, 26)
+            letters = chr(ord("A") + rem) + letters
+        return "Sheet1!$%s$2:$%s$%d" % (letters, letters, count + 1)
+
+    def _scatter_ser(self):
+        """The `c:ser` element owning these labels; guard against non-scatter."""
+        ser = self._element.getparent()
+        xChart = None if ser is None else ser.getparent()
+        if xChart is None:
+            raise ValueError("data labels are not attached to a series")
+        if xChart.tag != qn("c:scatterChart"):
+            raise NotImplementedError("cell-linked labels are only supported on XY scatter charts")
+        return ser
 
 
 class DataLabel(object):

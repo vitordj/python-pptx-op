@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from pptx.oxml.chart.datalabel import CT_DLbls
+from xml.sax.saxutils import escape
+
+from pptx.oxml import parse_xml
+from pptx.oxml.chart.datalabel import _LABEL_RANGE_URI, CT_DLbls, replace_ext
+from pptx.oxml.ns import nsdecls
 from pptx.oxml.simpletypes import XsdUnsignedInt
 from pptx.oxml.xmlchemy import (
     BaseOxmlElement,
@@ -149,6 +153,7 @@ class CT_SeriesComposite(BaseOxmlElement):
     yVal = ZeroOrOne("c:yVal", successors=_tag_seq[16:])
     smooth = ZeroOrOne("c:smooth", successors=_tag_seq[18:])
     bubbleSize = ZeroOrOne("c:bubbleSize", successors=_tag_seq[19:])
+    extLst = ZeroOrOne("c:extLst", successors=())
     del _tag_seq
 
     @property
@@ -202,6 +207,29 @@ class CT_SeriesComposite(BaseOxmlElement):
         dPt = self._add_dPt()
         dPt.idx.val = idx
         return dPt
+
+    def set_datalabels_range(self, formula, labels):
+        """Install/replace the `c15:datalabelsRange` extension for this series.
+
+        *formula* is the worksheet reference (e.g. ``Sheet1!$C$2:$C$4``) written
+        to `c15:f`; the `c15:dlblRangeCache` is populated from *labels*, which is
+        what PowerPoint actually renders (see ADR-0001). Any unrelated extension
+        is preserved.
+        """
+        pts = "".join(
+            '    <c:pt idx="%d"><c:v>%s</c:v></c:pt>\n' % (i, escape(str(label)))
+            for i, label in enumerate(labels)
+        )
+        data_range = parse_xml(
+            "<c15:datalabelsRange %s>\n"
+            "  <c15:f>%s</c15:f>\n"
+            "  <c15:dlblRangeCache>\n"
+            '    <c:ptCount val="%d"/>\n'
+            "%s"
+            "  </c15:dlblRangeCache>\n"
+            "</c15:datalabelsRange>" % (nsdecls("c15", "c"), escape(formula), len(labels), pts)
+        )
+        replace_ext(self.get_or_add_extLst(), _LABEL_RANGE_URI, data_range)
 
     @property
     def xVal_ptCount_val(self):

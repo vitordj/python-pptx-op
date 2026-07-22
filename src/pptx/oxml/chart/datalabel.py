@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from uuid import uuid4
+from xml.sax.saxutils import escape
+
 from pptx.enum.chart import XL_DATA_LABEL_POSITION
 from pptx.oxml import parse_xml
-from pptx.oxml.ns import nsdecls
+from pptx.oxml.ns import nsdecls, qn
 from pptx.oxml.text import CT_TextBody
 from pptx.oxml.xmlchemy import (
     BaseOxmlElement,
@@ -13,6 +16,27 @@ from pptx.oxml.xmlchemy import (
     ZeroOrMore,
     ZeroOrOne,
 )
+
+# -- URIs of the Office 2013 (`c15`) chart extensions used for cell-linked
+#    scatter data labels. See ADR-0001 and the c15 namespace in `ns.py`. --
+_LABEL_RANGE_URI = "{02D57815-91ED-43cb-92C2-25804820EDAC}"
+_SHOW_RANGE_URI = "{CE6537A1-D6FC-4f65-9D91-7224C49458BB}"
+
+
+def replace_ext(extLst, uri, *children):
+    """Replace the `c:ext` having *uri* under *extLst* with a fresh one.
+
+    Any `c:ext` whose `uri` differs is left untouched, so unknown extensions
+    survive a round-trip. The new `c:ext` receives *children* in order.
+    """
+    for ext in extLst.findall(qn("c:ext")):
+        if ext.get("uri") == uri:
+            extLst.remove(ext)
+    ext = parse_xml('<c:ext %s uri="%s"/>' % (nsdecls("c"), uri))
+    for child in children:
+        ext.append(child)
+    extLst.append(ext)
+    return ext
 
 
 class CT_DLbl(BaseOxmlElement):
@@ -43,6 +67,7 @@ class CT_DLbl(BaseOxmlElement):
     spPr = ZeroOrOne("c:spPr", successors=_tag_seq[5:])
     txPr = ZeroOrOne("c:txPr", successors=_tag_seq[6:])
     dLblPos = ZeroOrOne("c:dLblPos", successors=_tag_seq[7:])
+    extLst = ZeroOrOne("c:extLst", successors=())
     del _tag_seq
 
     def get_or_add_rich(self):
@@ -104,6 +129,47 @@ class CT_DLbl(BaseOxmlElement):
             "</c:dLbl>" % nsdecls("c", "a")
         )
 
+    @classmethod
+    def new_cell_range_dLbl(cls, idx, x, y, text):
+        """Return a loose `c:dLbl` for a displaced cell-linked scatter label.
+
+        The label is manually positioned at factorial offset (*x*, *y*) and its
+        text comes from a `CELLRANGE` field (linked to the worksheet), matching
+        what PowerPoint writes when a data label is dragged. The caller is
+        responsible for adding the `c15:showDataLabelsRange` extension.
+        """
+        return parse_xml(
+            "<c:dLbl %s>\n"
+            '  <c:idx val="%d"/>\n'
+            "  <c:layout>\n"
+            "    <c:manualLayout>\n"
+            '      <c:x val="%s"/>\n'
+            '      <c:y val="%s"/>\n'
+            "    </c:manualLayout>\n"
+            "  </c:layout>\n"
+            "  <c:tx>\n"
+            "    <c:rich>\n"
+            "      <a:bodyPr/>\n"
+            "      <a:lstStyle/>\n"
+            "      <a:p>\n"
+            '        <a:fld id="{%s}" type="CELLRANGE">\n'
+            '          <a:rPr lang="en-US"/>\n'
+            "          <a:pPr/>\n"
+            "          <a:t>%s</a:t>\n"
+            "        </a:fld>\n"
+            '        <a:endParaRPr lang="en-US"/>\n'
+            "      </a:p>\n"
+            "    </c:rich>\n"
+            "  </c:tx>\n"
+            '  <c:showLegendKey val="0"/>\n'
+            '  <c:showVal val="0"/>\n'
+            '  <c:showCatName val="0"/>\n'
+            '  <c:showSerName val="0"/>\n'
+            '  <c:showPercent val="0"/>\n'
+            '  <c:showBubbleSize val="0"/>\n'
+            "</c:dLbl>" % (nsdecls("c", "a"), idx, x, y, str(uuid4()).upper(), escape(str(text)))
+        )
+
     def remove_tx_rich(self):
         """
         Remove any `c:tx[c:rich]` child, or do nothing if not present.
@@ -156,6 +222,9 @@ class CT_DLbls(BaseOxmlElement):
     showCatName = ZeroOrOne("c:showCatName", successors=_tag_seq[8:])
     showSerName = ZeroOrOne("c:showSerName", successors=_tag_seq[9:])
     showPercent = ZeroOrOne("c:showPercent", successors=_tag_seq[10:])
+    showBubbleSize = ZeroOrOne("c:showBubbleSize", successors=_tag_seq[11:])
+    showLeaderLines = ZeroOrOne("c:showLeaderLines", successors=_tag_seq[13:])
+    extLst = ZeroOrOne("c:extLst", successors=())
     del _tag_seq
 
     @property
@@ -187,6 +256,56 @@ class CT_DLbls(BaseOxmlElement):
         if matches:
             return matches[0]
         return self._insert_dLbl_in_sequence(idx)
+
+    def add_cell_range_dLbl(self, idx, x, y, text):
+        """Add a displaced cell-linked `c:dLbl` for point *idx*, in `c:idx` order.
+
+        The new `c:dLbl` carries a `manualLayout` at factorial offset (*x*, *y*),
+        a `CELLRANGE` field showing *text*, and the `c15:dlblFieldTable` /
+        `c15:showDataLabelsRange` extension PowerPoint expects on such a label.
+        """
+        dLbl = CT_DLbl.new_cell_range_dLbl(idx, x, y, text)
+        replace_ext(
+            dLbl.get_or_add_extLst(),
+            _SHOW_RANGE_URI,
+            parse_xml("<c15:dlblFieldTable %s/>" % nsdecls("c15")),
+            parse_xml('<c15:showDataLabelsRange %s val="1"/>' % nsdecls("c15")),
+        )
+        siblings = self.dLbl_lst
+        for existing in siblings:
+            if existing.idx_val > idx:
+                existing.addprevious(dLbl)
+                return dLbl
+        if siblings:
+            siblings[-1].addnext(dLbl)
+        else:
+            self.insert(0, dLbl)
+        return dLbl
+
+    def use_cell_range_labels(self, show_leader_lines=True):
+        """Configure this `c:dLbls` for cell-linked scatter labels.
+
+        Turns off every built-in label content, sets leader lines per
+        *show_leader_lines*, and installs the `c15:showDataLabelsRange` /
+        `c15:showLeaderLines` extension. Existing per-point `c:dLbl` children
+        are removed so the caller starts from a clean slate.
+        """
+        for dLbl in self.dLbl_lst:
+            self.remove(dLbl)
+        self.get_or_add_showLegendKey().val = False
+        self.get_or_add_showVal().val = False
+        self.get_or_add_showCatName().val = False
+        self.get_or_add_showSerName().val = False
+        self.get_or_add_showPercent().val = False
+        self.get_or_add_showBubbleSize().val = False
+        self.get_or_add_showLeaderLines().val = bool(show_leader_lines)
+        leader = "1" if show_leader_lines else "0"
+        replace_ext(
+            self.get_or_add_extLst(),
+            _SHOW_RANGE_URI,
+            parse_xml('<c15:showDataLabelsRange %s val="1"/>' % nsdecls("c15")),
+            parse_xml('<c15:showLeaderLines %s val="%s"/>' % (nsdecls("c15"), leader)),
+        )
 
     @classmethod
     def new_dLbls(cls):
