@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from pptx.chart.datalabel import DataLabels
+from pptx.chart.datalabel import DataLabels, XyDataLabels
 from pptx.chart.marker import Marker
 from pptx.chart.point import BubblePoints, CategoryPoints, XyPoints
 from pptx.dml.chtfmt import ChartFormat
@@ -170,6 +170,11 @@ class XySeries(_BaseSeries, _MarkerMixin):
     """
     A data point series belonging to an XY (scatter) plot.
     """
+
+    @lazyproperty
+    def data_labels(self):
+        """|XyDataLabels| object controlling the data labels for this series."""
+        return XyDataLabels(self._ser.get_or_add_dLbls())
 
     def iter_values(self):
         """
