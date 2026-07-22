@@ -18,7 +18,8 @@ from pptx.oxml.xmlchemy import (
 )
 
 # -- URIs of the Office 2013 (`c15`) chart extensions used for cell-linked
-#    scatter data labels. See ADR-0001 and the c15 namespace in `ns.py`. --
+#    scatter data labels; the `c15` namespace is declared in `ns.py`. The
+#    cache-only design tradeoff is documented on `set_datalabels_range`. --
 _LABEL_RANGE_URI = "{02D57815-91ED-43cb-92C2-25804820EDAC}"
 _SHOW_RANGE_URI = "{CE6537A1-D6FC-4f65-9D91-7224C49458BB}"
 

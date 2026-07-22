@@ -212,9 +212,18 @@ class CT_SeriesComposite(BaseOxmlElement):
         """Install/replace the `c15:datalabelsRange` extension for this series.
 
         *formula* is the worksheet reference (e.g. ``Sheet1!$C$2:$C$4``) written
-        to `c15:f`; the `c15:dlblRangeCache` is populated from *labels*, which is
-        what PowerPoint actually renders (see ADR-0001). Any unrelated extension
-        is preserved.
+        to `c15:f`; the `c15:dlblRangeCache` is populated from *labels*.
+
+        This is deliberately **cache-only**. Such a label carries its text in two
+        places -- a `c15:f` formula pointing at a worksheet range and a
+        `c15:dlblRangeCache` holding the literal values -- and PowerPoint renders
+        from the cache. We write only the cache plus a plausible formula; we do
+        *not* write the text into the chart's embedded workbook, since that would
+        require a read-modify-write of the `.xlsx` (an ``openpyxl`` dependency
+        that python-pptx deliberately avoids -- it ships only write-only
+        ``XlsxWriter``). Consequence: labels display and stay editable in
+        PowerPoint, but the linked cells read as empty under "Edit Data in
+        Excel". Any unrelated extension on the series is preserved.
         """
         pts = "".join(
             '    <c:pt idx="%d"><c:v>%s</c:v></c:pt>\n' % (i, escape(str(label)))
