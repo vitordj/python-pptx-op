@@ -98,18 +98,32 @@ Full documentation for every item lives in [`docs/ext/`](docs/ext/index.rst).
 
 ## Installation
 
-The distribution is not on PyPI yet (see [Roadmap](#roadmap)), so install from git:
+```bash
+pip install python-pptx-op
+```
+
+Or straight from git, for the development version:
 
 ```bash
 pip install git+https://github.com/vitordj/python-pptx-op.git
 ```
 
-> **Note** — this fork installs the `pptx` package, exactly like upstream python-pptx.
-> The two cannot coexist in the same environment; uninstall `python-pptx` first, or use a
-> dedicated virtualenv.
-
-Requires Python 3.8+ and the same dependencies as upstream (`lxml`, `Pillow`,
+Requires Python 3.9+ and the same dependencies as upstream (`lxml`, `Pillow`,
 `XlsxWriter`, `typing_extensions`).
+
+> [!WARNING]
+> **Do not install this alongside `python-pptx`.** Both distributions provide the same
+> `pptx` package, so they overwrite each other's files. pip does *not* detect the
+> conflict: it reports both as installed, and you get a silently broken mixture — the
+> file-level additions (cell borders, shadows, transparency, bullets) disappear, while
+> `pptx.tablekit` and `pptx.chartex` remain importable and then fail at runtime with
+> errors like `AttributeError: '_Cell' object has no attribute 'borders'`.
+>
+> If `pip list | grep pptx` shows both, fix it with:
+>
+> ```bash
+> pip uninstall -y python-pptx python-pptx-op && pip install python-pptx-op
+> ```
 
 ### Migrating from python-pptx
 
@@ -216,12 +230,12 @@ and makes the fork's surface easy to review. Behaviour tests use `behave` under
 The project keeps upstream's tooling: `black` and `ruff` at a 100-column line length, and
 `pyright` in strict mode over `src/pptx` and `tests`.
 
+Publishing a release is documented in [RELEASING.md](RELEASING.md).
+
 ---
 
 ## Roadmap
 
-- Publishing to PyPI under the `python-pptx-op` distribution name (the import stays
-  `pptx`).
 - Unit tests for `pptx.tablekit` and `pptx.chartex`, the two modules currently without
   dedicated coverage.
 - Remaining chartEx layouts: histogram, Pareto and region map are defined in

@@ -3,11 +3,31 @@
 Release History
 ---------------
 
-Unreleased (python-pptx-op fork)
-++++++++++++++++++++++++++++++++
+1.1.0 (unreleased)
+++++++++++++++++++
 
-Forked from python-pptx 1.0.2. All changes below are additive: no upstream API was
-changed or removed. See ``docs/ext/`` for full documentation of each item.
+First release of the ``python-pptx-op`` fork, from python-pptx 1.0.2. All feature
+changes below are additive: no upstream API was changed or removed. See ``docs/ext/``
+for full documentation of each item.
+
+**Packaging**
+
+- The distribution is now published as ``python-pptx-op``. The import name is unchanged,
+  so ``import pptx`` and existing code keep working. Because both distributions provide
+  the same ``pptx`` package they must not be installed side by side — pip does not detect
+  the conflict and the result is a silently broken mixture
+- Raise the Python floor to 3.9. 3.8 reached end of life in October 2024, CI has only
+  ever tested 3.9 and later, and the pyright configuration already targets 3.9
+- Add ``.github/workflows/release.yml``: builds the sdist and wheel on a ``v*`` tag,
+  runs ``twine check --strict``, verifies the tag matches ``pptx.__version__``,
+  smoke-tests the built wheel in a clean virtualenv, and publishes to PyPI through
+  trusted publishing (no stored API token)
+- Add classifiers for Python 3.13 and ``Typing :: Typed``; point the project URLs at the
+  fork and credit the upstream project
+- build: list ``src/pptx/chartex/templates`` explicitly in ``MANIFEST.in``, matching the
+  existing entry for ``src/pptx/templates``. These parts are loaded from the installed
+  package at runtime; they were already picked up by ``include-package-data``, and the
+  entry makes that dependency explicit rather than incidental
 
 **Tables**
 
@@ -50,13 +70,9 @@ changed or removed. See ``docs/ext/`` for full documentation of each item.
 - feat(dml): ``LineFormat.begin_arrow``, ``.end_arrow`` and ``.cap`` (upstream #375)
 - feat(shapes): ``BaseShape.alt_text`` getter/setter for accessibility
 
-**Documentation and packaging**
+**Documentation and test suite**
 
 - docs: fork README and a new ``docs/ext/`` section documenting every addition
-- build: list ``src/pptx/chartex/templates`` explicitly in ``MANIFEST.in``, matching the
-  existing entry for ``src/pptx/templates``. These parts are loaded from the installed
-  package at runtime; they were already picked up by ``include-package-data``, and the
-  entry makes that dependency explicit rather than incidental
 - fix(tests): stop ``DescribePartFactory`` leaking a mock into the class-level
   ``PartFactory.part_type_for`` registry, which broke every later test that opened a real
   package
