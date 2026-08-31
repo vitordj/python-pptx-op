@@ -3,6 +3,68 @@
 Release History
 ---------------
 
+Unreleased (python-pptx-op fork)
+++++++++++++++++++++++++++++++++
+
+Forked from python-pptx 1.0.2. All changes below are additive: no upstream API was
+changed or removed. See ``docs/ext/`` for full documentation of each item.
+
+**Tables**
+
+- feat(table): per-cell border access via ``cell.borders`` — four edges plus two
+  diagonals, each a ``LineFormat`` (upstream #71)
+- feat(tablekit): new ``pptx.tablekit`` module — ``CellStyle``, ``BorderSpec``, ``Edge``
+  and ``StyledTable`` for reusable styles, range styling, exact sizing, run merging and
+  DataFrame import; works around table-style banding overriding explicit fills and stored
+  row heights being only a minimum (upstream #27, #203, #573, #480, #296)
+
+**Charts**
+
+- feat(chartex): new ``pptx.chartex`` module and ``shapes.add_chartex()`` for the 2014
+  Chart Extension family — waterfall, funnel, treemap, sunburst, box & whisker and the
+  clustered-column (histogram) layout
+- feat(chart): date-axis time units — ``base_time_unit``, ``major_time_unit`` and
+  ``minor_time_unit`` via the new ``XL_TIME_UNIT`` enumeration
+- feat(chart): ``DoughnutPlot.hole_size`` and ``.first_slice_angle`` (upstream #493)
+
+**Text**
+
+- feat(text): ``Font.strikethrough``, ``Font.superscript`` and ``Font.subscript``
+  (upstream #339, #574)
+- feat(text): ``Font.spacing``, ``Font.caps`` and ``Font.highlight_color``
+- feat(text): paragraph bullet control via ``paragraph.bullet`` — ``none()``,
+  ``character()`` and ``auto_number()``, with bullet font, colour and size
+  (upstream #100, #114)
+- feat(text): ``_Paragraph.margin_left``, ``.margin_right`` and ``.first_line_indent``
+- feat(text): ``TextFrame.text_direction`` with the new ``MSO_TEXT_DIRECTION``
+  enumeration
+- feat(fonts): Linux font directories, plus a ``PYTHON_PPTX_FONT_DIRECTORY`` override so
+  ``fit_text()`` works on Linux and unknown platforms (mirrors upstream PR #1039)
+
+**Shapes, colour and effects**
+
+- feat(dml): ``ColorFormat.transparency`` for fill and line colours (upstream #62)
+- feat(shapes): ``Picture.transparency``
+- feat(dml): ``ShadowFormat.blur_radius``, ``.distance``, ``.direction``, ``.color``,
+  ``.remove_shadow()`` and ``.soft_edge_radius``
+- feat(dml): ``LineFormat.begin_arrow``, ``.end_arrow`` and ``.cap`` (upstream #375)
+- feat(shapes): ``BaseShape.alt_text`` getter/setter for accessibility
+
+**Documentation and packaging**
+
+- docs: fork README and a new ``docs/ext/`` section documenting every addition
+- build: list ``src/pptx/chartex/templates`` explicitly in ``MANIFEST.in``, matching the
+  existing entry for ``src/pptx/templates``. These parts are loaded from the installed
+  package at runtime; they were already picked up by ``include-package-data``, and the
+  entry makes that dependency explicit rather than incidental
+- fix(tests): stop ``DescribePartFactory`` leaking a mock into the class-level
+  ``PartFactory.part_type_for`` registry, which broke every later test that opened a real
+  package
+- fix(tests): declare the three class-scoped fixtures in ``tests/opc`` as classmethods.
+  Recent pytest deprecates class-scoped fixtures defined as instance methods, and the
+  suite's ``filterwarnings = ["error"]`` turned that warning into 16 collection errors
+
+
 1.0.2 (2024-08-07)
 ++++++++++++++++++
 
