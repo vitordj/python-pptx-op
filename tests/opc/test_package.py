@@ -514,7 +514,11 @@ class DescribePartFactory:
         SlidePart_ = class_mock(request, "pptx.opc.package.XmlPart")
         SlidePart_.load.return_value = part_
         partname = PackURI("/ppt/slides/slide7.xml")
+        prior_part_type = PartFactory.part_type_for[CT.PML_SLIDE]
         PartFactory.part_type_for[CT.PML_SLIDE] = SlidePart_
+        request.addfinalizer(
+            lambda: PartFactory.part_type_for.__setitem__(CT.PML_SLIDE, prior_part_type)
+        )
 
         part = PartFactory(partname, CT.PML_SLIDE, package_, b"blob")
 
@@ -609,7 +613,7 @@ class Describe_ContentTypeMap:
 
     # fixtures ---------------------------------------------
 
-    @pytest.fixture(scope="class")
+    @pytest.fixture
     def content_type_map(self):
         return _ContentTypeMap.from_xml(testfile_bytes("expanded_pptx", "[Content_Types].xml"))
 

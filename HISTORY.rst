@@ -3,6 +3,29 @@
 Release History
 ---------------
 
+1.1.0 (2026-08-31)
+++++++++++++++++++
+
+First release of *python-pptx-op*, a friendly fork of Steve Canny's python-pptx,
+building on upstream release 1.0.2. All credit for the foundation of this library
+goes to Steve Canny (https://github.com/scanny).
+
+- Add ChartEx chart support (``pptx.chartex``)
+- Add table-building toolkit (``pptx.tablekit``)
+- Add ``Font`` character spacing, caps effect, and highlight color
+- Add ``_Run`` strikethrough and super/subscript, and paragraph bullet control
+- Add ``_Paragraph.margin_left``, ``margin_right``, and ``first_line_indent``
+- Add ``TextFrame.text_direction`` via ``a:bodyPr@vert``
+- Add ``ColorFormat`` transparency (``a:alpha``)
+- Add ``ShadowFormat`` blur radius, distance, direction, color, and soft-edge radius
+- Add ``LineFormat`` arrow heads and end cap
+- Add ``BaseShape.alt_text`` getter/setter via ``p:cNvPr@descr``
+- Add ``Picture.transparency`` via ``a:blip/a:alphaModFix@amt``
+- Add doughnut chart hole size and first-slice angle
+- Add Linux font directories and ``PYTHON_PPTX_FONT_DIRECTORY`` override
+- fix: replace read-only enum values
+- fix: package ``pptx/chartex/templates`` data files in sdist and wheel
+
 1.0.2 (2024-08-07)
 ++++++++++++++++++
 

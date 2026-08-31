@@ -3,8 +3,9 @@ requires = ["setuptools>=61.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "python-pptx"
+name = "python-pptx-op"
 authors = [{name = "Steve Canny", email = "stcanny@gmail.com"}]
+maintainers = [{name = "vitordj", email = "vitordj@4um.com.br"}]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
@@ -27,7 +28,7 @@ dependencies = [
     "lxml>=3.1.0",
     "typing_extensions>=4.9.0",
 ]
-description = "Create, read, and update PowerPoint 2007+ (.pptx) files."
+description = "Fork of Steve Canny's python-pptx with extra features. Create, read, and update PowerPoint 2007+ (.pptx) files."
 dynamic = ["version"]
 keywords = ["powerpoint", "ppt", "pptx", "openxml", "office"]
 license = { text = "MIT" }
@@ -35,10 +36,11 @@ readme = "README.rst"
 requires-python = ">=3.8"
 
 [project.urls]
-Changelog = "https://github.com/scanny/python-pptx/blob/master/HISTORY.rst"
+Changelog = "https://github.com/vitordj/python-pptx-op/blob/master/HISTORY.rst"
 Documentation = "https://python-pptx.readthedocs.io/en/latest/"
-Homepage = "https://github.com/scanny/python-pptx"
-Repository = "https://github.com/scanny/python-pptx"
+Homepage = "https://github.com/vitordj/python-pptx-op"
+Repository = "https://github.com/vitordj/python-pptx-op"
+Upstream = "https://github.com/scanny/python-pptx"
 
 [tool.black]
 line-length = 100
