@@ -262,7 +262,8 @@ class Describe_DirPkgReader:
     # --- fixture components -------------------------------
 
     @pytest.fixture(scope="class")
-    def dir_pkg_reader(self):
+    @classmethod
+    def dir_pkg_reader(cls):
         return _DirPkgReader(dir_pkg_path)
 
 
@@ -293,7 +294,8 @@ class Describe_ZipPkgReader:
     # --- fixture components -------------------------------
 
     @pytest.fixture(scope="class")
-    def zip_pkg_reader(self):
+    @classmethod
+    def zip_pkg_reader(cls):
         return _ZipPkgReader(zip_pkg_path)
 
 

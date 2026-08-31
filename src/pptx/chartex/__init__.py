@@ -5,7 +5,7 @@ whisker, histogram/Pareto, funnel, region-map). They use the ``cx:`` schema rath
 than the legacy ``c:`` chart schema, so they are implemented as a small parallel
 module instead of being grafted onto :mod:`pptx.chart`.
 
-See ``docs/dev/analysis/cht-waterfall-chart.rst`` for the schema analysis.
+See ``docs/ext/charts.rst`` for usage and the list of supported chart types.
 """
 
 from __future__ import annotations
