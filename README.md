@@ -47,7 +47,7 @@ those features against the real ECMA-376 schema, with the same test discipline a
 upstream project, so a report can be produced end-to-end from Python.
 
 Every addition is **purely additive**. No upstream API was changed or removed, and the
-full test suite — upstream's own tests plus this fork's — passes green at 2795 tests.
+full test suite — upstream's own tests plus this fork's — passes green at 2863 tests.
 
 ---
 
@@ -60,7 +60,7 @@ Each entry links to the upstream issue it answers, where one exists.
 | Feature | API | Upstream |
 | --- | --- | --- |
 | Per-cell borders (4 edges + 2 diagonals), each a full `LineFormat` | `cell.borders.left.width`, `.color`, `.dash_style` | [#71](https://github.com/scanny/python-pptx/issues/71) |
-| Reusable cell styles, range/row/column styling, exact sizing, run merging | [`pptx.tablekit`](docs/ext/tables.rst) — `StyledTable`, `CellStyle`, `BorderSpec` | [#27](https://github.com/scanny/python-pptx/issues/27), [#203](https://github.com/scanny/python-pptx/issues/203), [#573](https://github.com/scanny/python-pptx/issues/573) |
+| Reusable cell styles, range/row/column styling, exact sizing, run merging | [`pptx.tablekit`](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/tables.rst) — `StyledTable`, `CellStyle`, `BorderSpec` | [#27](https://github.com/scanny/python-pptx/issues/27), [#203](https://github.com/scanny/python-pptx/issues/203), [#573](https://github.com/scanny/python-pptx/issues/573) |
 | Row heights that match what PowerPoint actually renders | `StyledTable.autosize_rows()` | [#480](https://github.com/scanny/python-pptx/issues/480), [#296](https://github.com/scanny/python-pptx/issues/296) |
 
 ### Charts
@@ -92,7 +92,7 @@ Each entry links to the upstream issue it answers, where one exists.
 | Line arrow heads and end caps | `line.begin_arrow`, `line.end_arrow`, `line.cap` | [#375](https://github.com/scanny/python-pptx/issues/375) |
 | Alt text on any shape (accessibility) | `shape.alt_text` | not supported upstream |
 
-Full documentation for every item lives in [`docs/ext/`](docs/ext/index.rst).
+Full documentation for every item lives in [`docs/ext/`](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/index.rst).
 
 ---
 
@@ -111,8 +111,7 @@ pip install git+https://github.com/vitordj/python-pptx-op.git
 Requires Python 3.9+ and the same dependencies as upstream (`lxml`, `Pillow`,
 `XlsxWriter`, `typing_extensions`).
 
-> [!WARNING]
-> **Do not install this alongside `python-pptx`.** Both distributions provide the same
+> **Warning: do not install this alongside `python-pptx`.** Both distributions provide the same
 > `pptx` package, so they overwrite each other's files. pip does *not* detect the
 > conflict: it reports both as installed, and you get a silently broken mixture — the
 > file-level additions (cell borders, shadows, transparency, bullets) disappear, while
@@ -159,7 +158,7 @@ cell.borders.left.dash_style = MSO_LINE_DASH_STYLE.DASH
 
 `pptx.tablekit` builds on this with reusable styles, so a formatted report table is a
 handful of declarative lines rather than four nested loops. See
-[the tables guide](docs/ext/tables.rst).
+[the tables guide](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/tables.rst).
 
 ### Modern charts
 
@@ -177,7 +176,7 @@ slide.shapes.add_chartex(XL_CHART_EX_TYPE.WATERFALL,
 ```
 
 Treemap and sunburst take hierarchical categories (root-first tuples). See
-[the charts guide](docs/ext/charts.rst).
+[the charts guide](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/charts.rst).
 
 ### Effects and colour
 
@@ -195,7 +194,7 @@ shape.shadow.direction = 45.0                 # degrees clockwise from east
 shape.shadow.color.rgb = RGBColor(0, 0, 0)
 ```
 
-See [the effects guide](docs/ext/effects.rst).
+See [the effects guide](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/effects.rst).
 
 ---
 
@@ -203,11 +202,11 @@ See [the effects guide](docs/ext/effects.rst).
 
 | | |
 | --- | --- |
-| [Fork extensions overview](docs/ext/index.rst) | Everything this fork adds, by area |
-| [Tables and tablekit](docs/ext/tables.rst) | Cell borders, styled tables, sizing |
-| [Charts](docs/ext/charts.rst) | chartEx family, doughnut, date axes |
-| [Text](docs/ext/text.rst) | Runs, bullets, indents, direction, fonts |
-| [Shapes and effects](docs/ext/effects.rst) | Transparency, shadows, lines, alt text |
+| [Fork extensions overview](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/index.rst) | Everything this fork adds, by area |
+| [Tables and tablekit](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/tables.rst) | Cell borders, styled tables, sizing |
+| [Charts](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/charts.rst) | chartEx family, doughnut, date axes |
+| [Text](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/text.rst) | Runs, bullets, indents, direction, fonts |
+| [Shapes and effects](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/effects.rst) | Transparency, shadows, lines, alt text |
 | [python-pptx docs](https://python-pptx.readthedocs.io/en/latest/) | The upstream API, all of which still applies |
 
 The docs are Sphinx sources; build them with `make -C docs html`.
@@ -230,16 +229,16 @@ and makes the fork's surface easy to review. Behaviour tests use `behave` under
 The project keeps upstream's tooling: `black` and `ruff` at a 100-column line length, and
 `pyright` in strict mode over `src/pptx` and `tests`.
 
-Publishing a release is documented in [RELEASING.md](RELEASING.md).
+Publishing a release is documented in [RELEASING.md](https://github.com/vitordj/python-pptx-op/blob/master/RELEASING.md).
 
 ---
 
 ## Roadmap
 
-- Unit tests for `pptx.tablekit` and `pptx.chartex`, the two modules currently without
-  dedicated coverage.
-- Remaining chartEx layouts: histogram, Pareto and region map are defined in
+- Remaining chartEx layouts: the Pareto line and region map are defined in
   `XL_CHART_EX_TYPE` but not yet emitted by the writer.
+- Strict pyright cleanliness for `pptx.tablekit` and `pptx.chartex`, which still carry
+  partially-unknown types.
 
 ---
 
@@ -248,4 +247,4 @@ Publishing a release is documented in [RELEASING.md](RELEASING.md).
 python-pptx was created by [Steve Canny](https://github.com/scanny) and is the foundation
 of everything here; this fork is a thin layer of additional features on top of his work.
 
-Released under the MIT licence, the same as upstream. See [LICENSE](LICENSE).
+Released under the MIT licence, the same as upstream. See [LICENSE](https://github.com/vitordj/python-pptx-op/blob/master/LICENSE).

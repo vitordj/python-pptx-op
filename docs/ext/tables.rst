@@ -195,15 +195,11 @@ you never lose access to the full python-pptx API.
 
 **Merging**
 
-``merge_equal_runs(col, rows=None, skip=("", "Compromissada"))``
+``merge_equal_runs(col, rows=None, skip=("",))``
     Merge vertically-adjacent cells in a column that share the same text — the usual way
     to present a grouped category label once instead of repeated down the column. Values
-    listed in ``skip`` are never merged.
-
-    .. warning::
-       The default ``skip`` value carries a domain-specific label from the module's
-       original use case. Pass your own ``skip`` — ``skip=("",)`` to only protect blank
-       cells — rather than relying on the default.
+    listed in ``skip`` are never merged; by default only blank cells are protected. Pass
+    e.g. ``skip=("", "Subtotal")`` to also keep a label that legitimately repeats.
 
 **Table style**
 

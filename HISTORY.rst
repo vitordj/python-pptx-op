@@ -37,6 +37,9 @@ for full documentation of each item.
   and ``StyledTable`` for reusable styles, range styling, exact sizing, run merging and
   DataFrame import; works around table-style banding overriding explicit fills and stored
   row heights being only a minimum (upstream #27, #203, #573, #480, #296)
+- tablekit: ``StyledTable.merge_equal_runs()`` now skips only blank cells by default
+  (``skip=("",)``). The previous default also skipped a domain-specific label left over
+  from the module's original use case; pass ``skip=`` explicitly to keep that behaviour
 
 **Charts**
 
@@ -73,9 +76,18 @@ for full documentation of each item.
 **Documentation and test suite**
 
 - docs: fork README and a new ``docs/ext/`` section documenting every addition
+- docs: move ``requirements-docs.txt`` to Sphinx 7; the pinned Sphinx 1.8 stack no longer
+  installs on current Python. The docs build is warning-free under ``sphinx -W``
 - fix(tests): stop ``DescribePartFactory`` leaking a mock into the class-level
   ``PartFactory.part_type_for`` registry, which broke every later test that opened a real
   package
+- test: unit-test suites for ``pptx.tablekit`` (``tests/test_tablekit_ext.py``) and
+  ``pptx.chartex`` (``tests/chartex/``), including a save-and-reopen check for every
+  emitted chart type
+- fix(tests): port the ``cxml`` test helper to pyparsing's snake_case/PascalCase API.
+  pyparsing 3.3 deprecates the camelCase names, which the suite's warnings-as-errors
+  setting turned into collection errors; ``requirements-test.txt`` now asks for
+  ``pyparsing>=3.1``
 - fix(tests): declare the three class-scoped fixtures in ``tests/opc`` as classmethods.
   Recent pytest deprecates class-scoped fixtures defined as instance methods, and the
   suite's ``filterwarnings = ["error"]`` turned that warning into 16 collection errors

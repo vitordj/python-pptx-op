@@ -71,7 +71,7 @@ python -m venv /tmp/relcheck
 Run the test suite and build the docs too:
 
 ```bash
-pytest                               # 2795 tests
+pytest                               # 2863 tests
 make -C docs html                    # must be warning-free
 ```
 
