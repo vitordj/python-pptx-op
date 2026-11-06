@@ -53,12 +53,15 @@ class _LayoutSpec:
 def _waterfall_layout_pr(data: "ChartExData") -> str:
     """`cx:subtotals` marking which points are totals/subtotals.
 
-    By convention the first and last categories of a waterfall are totals (the opening
-    and closing balance). Callers needing finer control can post-process, but this
-    default matches the common "Anterior ... Total" shape used in practice.
+    Defaults to the first and last categories (the opening and closing balance), which
+    matches the common "Anterior ... Total" shape. ``ChartExData.subtotal_idxs``
+    overrides that when only some of them are totals.
     """
     n = len(data.values)
-    idxs = sorted({0, n - 1}) if n else []
+    if data.subtotal_idxs is not None:
+        idxs = [i for i in data.subtotal_idxs if 0 <= i < n]
+    else:
+        idxs = sorted({0, n - 1}) if n else []
     inner = "".join(f'<cx:idx val="{i}"/>' for i in idxs)
     return f"<cx:subtotals>{inner}</cx:subtotals>"
 
@@ -130,10 +133,36 @@ class ChartExXmlWriter:
     def _num_dim_xml(self) -> str:
         pts = "".join(f'<cx:pt idx="{i}">{v}</cx:pt>' for i, v in enumerate(self._data.values))
         n = len(self._data.values)
+        fmt = escape(self._data.number_format or "General", {'"': "&quot;"})
         return (
             f'<cx:numDim type="{self._spec.num_dim_type}">'
-            f'<cx:lvl ptCount="{n}" formatCode="General">{pts}</cx:lvl>'
+            f'<cx:lvl ptCount="{n}" formatCode="{fmt}">{pts}</cx:lvl>'
             "</cx:numDim>"
+        )
+
+    # -- shared formatting fragments ------------------------------------------
+
+    @property
+    def _num_fmt_xml(self) -> str:
+        """``cx:numFmt`` for the values, or "" when no number format was given."""
+        if not self._data.number_format:
+            return ""
+        fmt = escape(self._data.number_format, {'"': "&quot;"})
+        return f'<cx:numFmt formatCode="{fmt}" sourceLinked="0"/>'
+
+    @property
+    def _tx_pr_xml(self) -> str:
+        """``cx:txPr`` carrying the tick-label / data-label font, or "" if unset."""
+        data = self._data
+        if not data.font_name and data.font_size is None:
+            return ""
+        sz = "" if data.font_size is None else f' sz="{int(round(data.font_size * 100))}"'
+        latin = "" if not data.font_name else f'<a:latin typeface="{escape(data.font_name)}"/>'
+        return (
+            "<cx:txPr><a:bodyPr/><a:p>"
+            f"<a:pPr><a:defRPr{sz}>{latin}</a:defRPr></a:pPr>"
+            f"<a:endParaRPr{sz}>{latin}</a:endParaRPr>"
+            "</a:p></cx:txPr>"
         )
 
     @staticmethod
@@ -158,14 +187,32 @@ class ChartExXmlWriter:
         layout_pr = ""
         if self._spec.layout_pr is not None:
             layout_pr = f"<cx:layoutPr>{self._spec.layout_pr(self._data)}</cx:layoutPr>"
+        # -- cx:series child order per the chartex schema: tx, dataPt*, dataLabels,
+        # -- dataId, layoutPr. PowerPoint rejects the part if these are out of order.
         return (
             f'<cx:series layoutId="{self._layout_id}" uniqueId="{{00000000-0000-0000-0000-000000000000}}">'
             f"<cx:tx><cx:txData><cx:v>{escape(self._data.series_name)}</cx:v></cx:txData></cx:tx>"
-            '<cx:dataLabels><cx:visibility seriesName="0" categoryName="0" value="1"/></cx:dataLabels>'
+            f"{self._data_pts_xml}"
+            f"<cx:dataLabels>{self._num_fmt_xml}{self._tx_pr_xml}"
+            '<cx:visibility seriesName="0" categoryName="0" value="1"/></cx:dataLabels>'
             '<cx:dataId val="0"/>'
             f"{layout_pr}"
             "</cx:series>"
         )
+
+    @property
+    def _data_pts_xml(self) -> str:
+        """One ``cx:dataPt`` per explicitly colored point (uncolored points are skipped)."""
+        parts: list[str] = []
+        for idx, color in enumerate(self._data.point_colors[: len(self._data.values)]):
+            if not color:
+                continue
+            parts.append(
+                f'<cx:dataPt idx="{idx}">'
+                f'<cx:spPr><a:solidFill><a:srgbClr val="{escape(color)}"/></a:solidFill></cx:spPr>'
+                "</cx:dataPt>"
+            )
+        return "".join(parts)
 
     @property
     def _axes_xml(self) -> str:
@@ -175,10 +222,13 @@ class ChartExXmlWriter:
                 scaling = "<cx:valScaling/>"
             else:
                 scaling = '<cx:catScaling gapWidth="0.5"/>'
+            # -- cx:axis child order: scaling, majorGridlines, tickLabels, numFmt, txPr.
+            # -- Only the value axis shows numbers, so the format goes there alone.
+            num_fmt = self._num_fmt_xml if kind == "val" else ""
             parts.append(
                 f'<cx:axis id="{axis_id}">{scaling}'
                 "<cx:majorGridlines><cx:spPr><a:ln><a:noFill/></a:ln></cx:spPr></cx:majorGridlines>"
-                "<cx:tickLabels/></cx:axis>"
+                f"<cx:tickLabels/>{num_fmt}{self._tx_pr_xml}</cx:axis>"
             )
         return "".join(parts)
 

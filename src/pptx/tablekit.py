@@ -455,6 +455,11 @@ class StyledTable:
             if j > 1:
                 top = self._table.cell(r, col)
                 bottom = self._table.cell(row_list[i + j - 1], col)
+                # `_Cell.merge` moves the spanned cells' paragraphs into the origin cell,
+                # so merging N identical labels would stack N copies of the same text in
+                # the merged cell. Empty the duplicates first and only the top one shows.
+                for k in range(1, j):
+                    self._table.cell(row_list[i + k], col).text_frame.clear()
                 top.merge(bottom)
             i += j
         return self
