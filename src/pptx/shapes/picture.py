@@ -212,7 +212,8 @@ class Picture(_BasePicture):
         alphaModFix = blip.alphaModFix
         if alphaModFix is None:
             return 0.0
-        return 1.0 - alphaModFix.amt
+        # amt is stored in 1/100000 units; round away float noise from the subtraction
+        return round(1.0 - alphaModFix.amt, 5)
 
     @transparency.setter
     def transparency(self, value: float):

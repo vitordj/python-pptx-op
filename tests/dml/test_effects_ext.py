@@ -34,6 +34,18 @@ class DescribeShadowFormat_shadow:
     def it_returns_None_color_when_no_explicit_shadow(self):
         assert _shadow().color is None
 
+    def it_returns_None_color_before_any_shadow_property_is_set(self):
+        shadow = _shadow()
+        assert shadow.color is None
+        shadow.soft_edge_radius = Pt(3)  # softEdge alone is not an outer shadow
+        assert shadow.color is None
+
+    def it_supports_the_color_example_in_its_docstring(self):
+        shadow = _shadow()
+        shadow.blur_radius = Pt(4)
+        shadow.color.rgb = RGBColor(0x00, 0x00, 0x00)
+        assert shadow.color.rgb == RGBColor(0x00, 0x00, 0x00)
+
     def it_creates_outerShdw_with_default_subtree_on_first_write(self):
         shadow = _shadow()
         shadow.blur_radius = Pt(4)
