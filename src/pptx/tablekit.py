@@ -448,13 +448,21 @@ class StyledTable:
             j = 1
             while (
                 i + j < len(row_list)
+                and row_list[i + j] == row_list[i + j - 1] + 1
                 and self._table.cell(row_list[i + j], col).text == text
                 and text not in skip
             ):
                 j += 1
             if j > 1:
-                top = self._table.cell(r, col)
-                bottom = self._table.cell(row_list[i + j - 1], col)
+                run_cells = [self._table.cell(row_list[i + k], col) for k in range(j)]
+                top, bottom = run_cells[0], run_cells[-1]
+                # -- merge() appends the text of every non-empty spanned cell to the origin,
+                # -- which would repeat the shared text. Empty the other cells first; that
+                # -- leaves the origin's run formatting intact. Skip it when merge() is going
+                # -- to refuse the range anyway, so a failed call changes nothing.
+                if not any(c.is_merge_origin or c.is_spanned for c in run_cells):
+                    for cell in run_cells[1:]:
+                        cell.text = ""
                 top.merge(bottom)
             i += j
         return self
