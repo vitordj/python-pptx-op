@@ -185,6 +185,7 @@ class ChartExXmlWriter:
 
 def new_chartex_xml(chart_type: "XL_CHART_EX_TYPE", chart_data: "ChartExData") -> bytes:
     """Return the chartEx part XML bytes for `chart_type` depicting `chart_data`."""
+    chart_data.validate()
     return ChartExXmlWriter(chart_type, chart_data).xml_bytes()
 
 
