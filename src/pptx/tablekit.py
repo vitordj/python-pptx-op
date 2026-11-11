@@ -495,16 +495,38 @@ class StyledTable:
         return self
 
     def autosize_rows(
-        self, font_pt: float, lines: int = 1, pad_cm: float = 0.0, header_pt: "float | None" = None
+        self,
+        font_pt: float,
+        lines: int = 1,
+        pad_cm: float = 0.0,
+        header_pt: "float | None" = None,
+        include_margins: bool = True,
     ) -> "StyledTable":
         """Set every row height to the height PowerPoint will render (issues #480/#296).
 
+        Each row's height is the text height (~1.2x `font_pt` per line, times `lines`), plus
+        the cell text margins (when `include_margins` is true), plus `pad_cm` of extra space.
+        The margin part is the largest ``margin_top + margin_bottom`` among the row's cells,
+        read from the cells themselves, so custom margins (``CellStyle.margins_cm`` or
+        ``cell.margin_top = ...``) are honoured and a row with zero margins gets nothing added.
+
         `header_pt` lets the first row use a different font size than the body.
+
+        The margins used to be left out, which stored every row 0.1 inch too short with default
+        cell margins. Pass ``include_margins=False`` to get those earlier numbers exactly, for
+        instance when `pad_cm` was already chosen to make up for them.
         """
         rows = self._table.rows
         for i, row in enumerate(rows):
             pt = header_pt if (header_pt is not None and i == 0) else font_pt
-            row.height = min_row_height_for_font(pt, lines=lines, pad_cm=pad_cm)
+            height = int(min_row_height_for_font(pt, lines=lines, pad_cm=pad_cm))
+            if include_margins:
+                # -- spanned cells still report their own (default) margins, so no special case
+                height += max(
+                    (int(cell.margin_top) + int(cell.margin_bottom) for cell in row.cells),
+                    default=0,
+                )
+            row.height = Emu(height)
         return self
 
     def set_uniform_row_height(self, cm: float) -> "StyledTable":
