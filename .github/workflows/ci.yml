@@ -14,10 +14,12 @@ permissions:
 jobs:
 
   build:
-    runs-on: ubuntu-latest
+    # -- pinned: `ubuntu-latest` is now Ubuntu 26.04, for which setup-python has no
+    # -- Python 3.9 build. Go back to `ubuntu-latest` once 3.9 leaves the matrix.
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}

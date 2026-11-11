@@ -82,12 +82,13 @@ class ShadowFormat(object):
 
     @property
     def direction(self) -> float | None:
-        """Direction of shadow offset as float degrees (0-360), or None.
+        """Direction of the shadow offset as float degrees (0-360), or None.
 
-        0° = right, 90° = down, 180° = left, 270° = up.
-        PowerPoint's "Bottom-Right" preset uses 315° (≈ 5400000 / 60000).
-        Wait — actually 5400000/60000 = 90°. Let me clarify: 0=right, 90=down.
-        PowerPoint's offset-bottom-right default dir is 5400000 → 90°.
+        Angles run clockwise from east: 0° casts the shadow to the right, 90° straight
+        down, 180° left, and 270° up. A shadow to the lower right is therefore 45°.
+
+        Stored as `a:outerShdw@dir` in 60000ths of a degree; the conversion is handled
+        here, so assign plain degrees.
         """
         outerShdw = self._outerShdw
         return None if outerShdw is None else outerShdw.dir

@@ -68,8 +68,8 @@ source_suffix = ".rst"
 master_doc = "index"
 
 # General information about the project.
-project = u"python-pptx"
-copyright = u"2012, 2013, Steve Canny"
+project = u"python-pptx-op"
+copyright = u"2012, 2013, Steve Canny; fork extensions 2026, Vítor Dias Javornik"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -114,6 +114,8 @@ rst_epilog = """
 
 .. |BaseShape| replace:: :class:`.BaseShape`
 
+.. |_Bullet| replace:: :class:`._Bullet`
+
 .. |BaseSlidePart| replace:: :class:`.BaseSlidePart`
 
 .. |BubbleChartData| replace:: :class:`.BubbleChartData`
@@ -144,9 +146,13 @@ rst_epilog = """
 
 .. |_Cell| replace:: :class:`_Cell`
 
+.. |_CellBorders| replace:: :class:`._CellBorders`
+
 .. |Chart| replace:: :class:`.Chart`
 
 .. |ChartData| replace:: :class:`.ChartData`
+
+.. |ChartExData| replace:: :class:`.ChartExData`
 
 .. |ChartFormat| replace:: :class:`.ChartFormat`
 
@@ -231,6 +237,8 @@ rst_epilog = """
 .. |Length| replace:: :class:`.Length`
 
 .. |LineFormat| replace:: :class:`.LineFormat`
+
+.. |_LineEndFormat| replace:: :class:`._LineEndFormat`
 
 .. |_LineSegment| replace:: :class:`._LineSegment`
 
@@ -341,6 +349,8 @@ rst_epilog = """
 .. |SlideShapes| replace:: :class:`.SlideShapes`
 
 .. |str| replace:: :class:`str`
+
+.. |StyledTable| replace:: :class:`.StyledTable`
 
 .. |Table| replace:: :class:`Table`
 

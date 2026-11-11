@@ -17,6 +17,7 @@ can be found here:
    MsoLineDashStyle
    MsoPatternType
    MsoShapeType
+   MsoTextDirection
    MsoTextUnderlineType
    MsoThemeColorIndex
    MsoVerticalAnchor
@@ -28,11 +29,13 @@ can be found here:
 
    XlAxisCrosses
    XlCategoryType
+   XlChartExType
    XlChartType
    XlDataLabelPosition
    XlLegendPosition
    XlMarkerStyle
    XlTickLabelPosition
    XlTickMark
+   XlTimeUnit
 
    ExcelNumFormat

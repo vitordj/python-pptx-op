@@ -432,13 +432,14 @@ class StyledTable:
         self,
         col: int,
         rows: "Iterable[int] | None" = None,
-        skip=("", "Compromissada"),
+        skip: "Iterable[str]" = ("",),
     ) -> "StyledTable":
         """Merge vertically-adjacent cells in `col` that share the same text.
 
-        Native replacement for the spreadsheet ``mescla_coluna`` trick. Values in
-        `skip` are never merged (e.g. blanks, or a label that legitimately repeats).
+        Values in `skip` are never merged -- blank cells by default; pass e.g.
+        ``skip=("", "Subtotal")`` to also keep a label that legitimately repeats.
         """
+        skip = tuple(skip)
         nrows = len(self._table.rows)
         row_list = list(range(nrows) if rows is None else rows)
         i = 0
