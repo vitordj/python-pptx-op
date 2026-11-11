@@ -188,7 +188,8 @@ class _Color(object):
         alpha = self._xClr.alpha
         if alpha is None:
             return 0.0
-        return 1.0 - alpha.val
+        # alpha is stored in 1/100000 units; round away float noise from the subtraction
+        return round(1.0 - alpha.val, 5)
 
     @transparency.setter
     def transparency(self, value):
@@ -235,6 +236,11 @@ class _NoneColor(_Color):
     @property
     def color_type(self):
         return None
+
+    @property
+    def transparency(self):
+        """Always 0.0 (opaque) when no color is defined."""
+        return 0.0
 
     @property
     def theme_color(self):
