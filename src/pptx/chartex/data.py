@@ -7,6 +7,7 @@ tuples, root-first), the latter being used by treemap and sunburst.
 
 from __future__ import annotations
 
+import math
 from typing import Iterable, Sequence, Union
 
 CategoryValue = Union[str, Sequence[str]]
@@ -57,6 +58,48 @@ class ChartExData:
         """
         self._series_name = name
         self._values = [float(v) for v in values]
+
+    def validate(self) -> None:
+        """Raise |ValueError| if this data cannot be written as a valid chartEx part.
+
+        Checks that the category and value counts agree, that every value is finite, and
+        that hierarchical categories all have the same depth (and are not mixed with plain
+        strings). Returns |None| when the data is fine; never modifies the data.
+        """
+        n_cats, n_vals = len(self._categories), len(self._values)
+        if n_cats != n_vals:
+            raise ValueError(
+                f"chartEx data has {n_cats} categories but {n_vals} values; "
+                "they must be the same length"
+            )
+
+        for idx, value in enumerate(self._values):
+            if not math.isfinite(value):
+                raise ValueError(
+                    f"chartEx value at index {idx} is {value!r}; "
+                    "values must be finite (no nan or inf)"
+                )
+
+        if not self._categories:
+            return
+        first_is_str = isinstance(self._categories[0], str)
+        for idx, cat in enumerate(self._categories):
+            if isinstance(cat, str) != first_is_str:
+                raise ValueError(
+                    f"chartEx categories mix plain strings and tuples (category {idx} "
+                    f"is {'a string' if isinstance(cat, str) else 'a tuple'}, category 0 "
+                    f"is {'a string' if first_is_str else 'a tuple'}); use one or the other"
+                )
+        if first_is_str:
+            return
+        first_depth = len(self._categories[0])
+        for idx, cat in enumerate(self._categories):
+            if len(cat) != first_depth:
+                raise ValueError(
+                    f"chartEx category {idx} has depth {len(cat)} but the first category "
+                    f"has depth {first_depth}; all hierarchical categories must have the "
+                    "same depth"
+                )
 
     # -- internal helpers used by the XML writer ------------------------------
 
