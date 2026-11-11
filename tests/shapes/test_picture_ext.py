@@ -65,6 +65,23 @@ class DescribePicture_transparency:
 
         assert abs(pic2.transparency - 0.3) < 0.001
 
+    @pytest.mark.parametrize("value", [0.1, 0.25, 0.3, 0.5, 0.7, 0.9, 0.99999])
+    def it_reads_back_exactly_what_was_set(self, tmp_path, value):
+        img = _make_png(tmp_path)
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        pic = _add_picture(slide, str(img))
+        pic.transparency = value
+        assert pic.transparency == value
+
+    def it_writes_70000_to_alphaModFix_amt_for_0_3(self, tmp_path):
+        img = _make_png(tmp_path)
+        prs = Presentation()
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        pic = _add_picture(slide, str(img))
+        pic.transparency = 0.3
+        assert pic._blip.alphaModFix.get("amt") == "70000"
+
 
 # ---------------------------------------------------------------------------
 # helpers

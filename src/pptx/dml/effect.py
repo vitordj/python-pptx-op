@@ -21,8 +21,9 @@ class ShadowFormat(object):
 
     Shadow properties (``blur_radius``, ``distance``, ``direction``,
     ``color``) target the OOXML ``a:outerShdw`` element. Reading any of
-    them returns ``None`` when no explicit shadow is set; writing any of
-    them creates the shadow element with sensible defaults on first write.
+    them returns ``None`` when no explicit shadow is set. Setting
+    ``blur_radius``, ``distance`` or ``direction`` creates the shadow element
+    with defaults; ``color`` gives a ``ColorFormat`` only once it exists.
 
     ``soft_edge_radius`` targets the ``a:softEdge`` element independently.
     """
@@ -98,11 +99,14 @@ class ShadowFormat(object):
 
     @property
     def color(self) -> ColorFormat | None:
-        """``ColorFormat`` for the shadow colour, or ``None`` if not set.
+        """``ColorFormat`` for the shadow colour; ``None`` until the shape has an explicit shadow.
 
-        Example::
+        Setting ``blur_radius``, ``distance`` or ``direction`` creates the shadow, after which
+        this returns a ``ColorFormat``. Example::
 
-            shape.shadow.color.rgb = RGBColor(0x00, 0x00, 0x00)
+            shadow = shape.shadow
+            shadow.blur_radius = Pt(4)
+            shadow.color.rgb = RGBColor(0x00, 0x00, 0x00)
         """
         outerShdw = self._outerShdw
         if outerShdw is None:
