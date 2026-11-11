@@ -324,9 +324,9 @@ class DateAxis(_BaseAxis):
         """Read/write :ref:`XlTimeUnit` value specifying the smallest time unit.
 
         This is the base unit (`c:baseTimeUnit`) used to group categories on the axis,
-        for example grouping daily data points into months. Returns `XL_TIME_UNIT.DAYS`
-        when no base time unit is set (the PowerPoint default). The value |None| also
-        corresponds to the 'Auto' setting and removes the element.
+        for example grouping daily data points into months. Returns |None| when no
+        `c:baseTimeUnit` element is present (PowerPoint then determines the unit
+        automatically, the 'Auto' setting). Assigning |None| removes the element.
         """
         baseTimeUnit = self._element.baseTimeUnit
         if baseTimeUnit is None:
