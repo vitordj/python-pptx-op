@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING, Iterator, cast
 
 from pptx.dml.color import RGBColor
@@ -449,7 +450,9 @@ class Font(object):
         Value is |True|, |False|, or |None|. |None| (default) inherits the setting from the style
         hierarchy. |True| applies a single strikethrough (``strike="sngStrike"``); |False| applies
         no strikethrough (``strike="noStrike"``). For an explicit double strikethrough assign the
-        string ``"dblStrike"``; reading a double-strikethrough run returns |True|.
+        string ``"dblStrike"``; reading a double-strikethrough run returns |True|. The strings
+        ``"sngStrike"`` and ``"noStrike"`` are also accepted. Any other value raises
+        |ValueError|.
         """
         strike = self._rPr.strike
         if strike is None:
@@ -462,6 +465,13 @@ class Font(object):
             value = "sngStrike"
         elif value is False:
             value = "noStrike"
+        elif value is not None and (
+            not isinstance(value, str) or value not in ("sngStrike", "dblStrike", "noStrike")
+        ):
+            raise ValueError(
+                "strikethrough must be None, True, False, 'sngStrike', 'dblStrike' or 'noStrike',"
+                f" got {value!r}"
+            )
         self._rPr.strike = value
 
     @property
@@ -850,8 +860,10 @@ class _Bullet(object):
     """Provides access to the bullet settings of a paragraph.
 
     Corresponds to the bullet-related child elements of the `a:pPr` element (`a:buNone`,
-    `a:buChar`, `a:buAutoNum`, plus the `a:buFont`, `a:buClr`, and `a:buSzPct` styling elements).
-    These three bullet kinds are mutually exclusive; setting one removes any other.
+    `a:buChar`, `a:buAutoNum`, `a:buBlip`, plus the `a:buFont`, `a:buClr`, and `a:buSzPct`
+    styling elements). The bullet kinds are mutually exclusive; setting one removes any other,
+    including a picture bullet. Setting a style element likewise removes its competing
+    alternatives (`a:buFontTx`, `a:buClrTx`, `a:buSzTx`, `a:buSzPts`).
     """
 
     def __init__(self, pPr: CT_TextParagraphProperties):
@@ -859,7 +871,9 @@ class _Bullet(object):
 
     @property
     def type(self) -> str | None:
-        """One of ``"none"``, ``"character"``, ``"auto_number"``, or |None| if not set here.
+        """One of ``"none"``, ``"character"``, ``"auto_number"``, ``"picture"``, or |None|.
+
+        ``"picture"`` indicates a picture bullet (`a:buBlip`), which can be read but not set here.
 
         |None| indicates no explicit bullet setting on this paragraph; the value is inherited from
         the style hierarchy.
@@ -870,6 +884,8 @@ class _Bullet(object):
             return "character"
         if self._pPr.buAutoNum is not None:
             return "auto_number"
+        if self._pPr.buBlip is not None:
+            return "picture"
         return None
 
     @property
@@ -894,15 +910,17 @@ class _Bullet(object):
         char: str = "•",
         *,
         font: str | None = None,
-        color: str | None = None,
+        color: str | RGBColor | None = None,
         size_pct: float | None = None,
     ) -> None:
         """Set a character (glyph) bullet, e.g. ``"•"`` (the default), ``"–"``, ``"▪"``.
 
         `font` is a typeface name for the bullet glyph (commonly ``"Arial"`` or ``"Wingdings"``).
-        `color` is an RRGGBB hex string. `size_pct` sizes the bullet relative to the text, e.g.
-        ``80`` for 80% (range 25–400).
+        `color` is an |RGBColor| or an RRGGBB hex string with an optional leading ``#``. `size_pct`
+        sizes the bullet relative to the text, e.g. ``80`` for 80% (range 25–400). |ValueError| is
+        raised, and the paragraph left unchanged, for an invalid `color` or `size_pct`.
         """
+        self._validate_style(color, size_pct)
         self._clear_kind()
         self._apply_style(font, color, size_pct)
         self._pPr.get_or_add_buChar().char = char
@@ -913,7 +931,7 @@ class _Bullet(object):
         *,
         start_at: int | None = None,
         font: str | None = None,
-        color: str | None = None,
+        color: str | RGBColor | None = None,
         size_pct: float | None = None,
     ) -> None:
         """Set an automatically-numbered bullet.
@@ -921,8 +939,9 @@ class _Bullet(object):
         `number_type` is an OOXML auto-number scheme such as ``"arabicPeriod"`` (``1.``),
         ``"arabicParenR"`` (``1)``), ``"romanLcPeriod"`` (``i.``), or ``"alphaUcPeriod"`` (``A.``).
         `start_at` overrides the starting number. `font`, `color`, and `size_pct` style the marker
-        as in :meth:`character`.
+        as in :meth:`character`, including validation.
         """
+        self._validate_style(color, size_pct)
         self._clear_kind()
         self._apply_style(font, color, size_pct)
         buAutoNum = self._pPr.get_or_add_buAutoNum()
@@ -930,24 +949,51 @@ class _Bullet(object):
         if start_at is not None:
             buAutoNum.startAt = start_at
 
-    def _apply_style(self, font: str | None, color: str | None, size_pct: float | None) -> None:
-        if size_pct is not None:
-            self._pPr._remove_buSzPct()  # pyright: ignore[reportPrivateUsage]
-            self._pPr.get_or_add_buSzPct().val = size_pct / 100.0
+    @staticmethod
+    def _normalize_color(color: object) -> str:
+        """Return `color` as upper-case six-digit hex, or raise |ValueError|."""
+        text = str(color)
+        if isinstance(color, str) and text.startswith("#"):
+            text = text[1:]
+        if not isinstance(color, (str, RGBColor)) or not re.fullmatch(r"[0-9A-Fa-f]{6}", text):
+            raise ValueError(
+                f"bullet color must be an RGBColor or RRGGBB hex string, got {color!r}"
+            )
+        return text.upper()
+
+    @classmethod
+    def _validate_style(cls, color: object, size_pct: float | None) -> None:
+        """Raise |ValueError| if `color` or `size_pct` is invalid; never touches the XML."""
         if color is not None:
-            buClr = self._pPr.get_or_add_buClr()
+            cls._normalize_color(color)
+        if size_pct is not None and not 25 <= size_pct <= 400:
+            raise ValueError(f"bullet size_pct must be in range 25..400, got {size_pct!r}")
+
+    def _apply_style(
+        self, font: str | None, color: str | RGBColor | None, size_pct: float | None
+    ) -> None:
+        pPr = self._pPr
+        if size_pct is not None:
+            pPr._remove_buSzTx()  # pyright: ignore[reportPrivateUsage]
+            pPr._remove_buSzPts()  # pyright: ignore[reportPrivateUsage]
+            pPr._remove_buSzPct()  # pyright: ignore[reportPrivateUsage]
+            pPr.get_or_add_buSzPct().val = size_pct / 100.0
+        if color is not None:
+            hex_color = self._normalize_color(color)
+            pPr._remove_buClrTx()  # pyright: ignore[reportPrivateUsage]
+            buClr = pPr.get_or_add_buClr()
             for child in list(buClr):
                 buClr.remove(child)
-            buClr.append(parse_xml(f'<a:srgbClr {nsdecls("a")} val="{color}"/>'))
+            buClr.append(parse_xml(f'<a:srgbClr {nsdecls("a")} val="{hex_color}"/>'))
         if font is not None:
-            self._pPr._remove_buFont()  # pyright: ignore[reportPrivateUsage]
-            self._pPr.get_or_add_buFont().typeface = font
+            pPr._remove_buFontTx()  # pyright: ignore[reportPrivateUsage]
+            pPr._remove_buFont()  # pyright: ignore[reportPrivateUsage]
+            pPr.get_or_add_buFont().typeface = font
 
     def _clear_kind(self) -> None:
-        """Remove whichever of the three mutually-exclusive bullet-kind elements is present."""
-        self._pPr._remove_buNone()  # pyright: ignore[reportPrivateUsage]
-        self._pPr._remove_buChar()  # pyright: ignore[reportPrivateUsage]
-        self._pPr._remove_buAutoNum()  # pyright: ignore[reportPrivateUsage]
+        """Remove whichever of the mutually-exclusive bullet-kind elements is present."""
+        for name in ("buNone", "buChar", "buAutoNum", "buBlip"):
+            getattr(self._pPr, f"_remove_{name}")()
 
 
 class _Run(Subshape):
