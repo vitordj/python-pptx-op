@@ -799,26 +799,45 @@ class ST_TextPoint(BaseIntType):
         cls.validate_int_in_range(value, -400000, 400000)
 
 
-class ST_TextIndent(BaseIntType):
-    """100ths of a point; used for a:pPr@marL, @marR, and @indent attributes.
+class ST_TextMargin(BaseIntType):
+    """Paragraph left/right margin in EMU; used for `a:pPr@marL` and `@marR`.
 
-    marL/marR are non-negative; indent can be negative (hanging indent).
-    OOXML range: -158400..914400 centipoints → -20116800..116128800 EMU.
-    Validation is performed in EMU (the unit of values passed at runtime).
+    xsd:int in the range 0..51206400 (EMU). The XML value is a plain integer count of EMU, not
+    centipoints. Values read from XML are returned as |Emu| so `.pt`, `.inches`, etc. work.
     """
 
     @classmethod
     def convert_from_xml(cls, str_value):
-        return Centipoints(int(str_value))
+        return Emu(int(str_value))
 
     @classmethod
     def convert_to_xml(cls, value):
-        length = Emu(value)
-        return str(length.centipoints)
+        return str(int(Emu(value)))
 
     @classmethod
     def validate(cls, value):
-        cls.validate_int_in_range(value, -20116800, 116128800)
+        cls.validate_int_in_range(value, 0, 51206400)
+
+
+class ST_TextIndent(BaseIntType):
+    """First-line indent in EMU; used for the `a:pPr@indent` attribute.
+
+    xsd:int in the range -51206400..51206400 (EMU). Negative values produce a hanging indent. The
+    XML value is a plain integer count of EMU, not centipoints. Values read from XML are returned
+    as |Emu| so `.pt`, `.inches`, etc. work.
+    """
+
+    @classmethod
+    def convert_from_xml(cls, str_value):
+        return Emu(int(str_value))
+
+    @classmethod
+    def convert_to_xml(cls, value):
+        return str(int(Emu(value)))
+
+    @classmethod
+    def validate(cls, value):
+        cls.validate_int_in_range(value, -51206400, 51206400)
 
 
 class ST_TextTypeface(XsdString):

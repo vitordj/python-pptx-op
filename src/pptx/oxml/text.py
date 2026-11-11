@@ -24,6 +24,7 @@ from pptx.oxml.simpletypes import (
     ST_TextFontSize,
     ST_TextIndent,
     ST_TextIndentLevelType,
+    ST_TextMargin,
     ST_TextPoint,
     ST_TextSpacingPercentOrPercentString,
     ST_TextSpacingPoint,
@@ -583,10 +584,10 @@ class CT_TextParagraphProperties(BaseOxmlElement):
         "algn", PP_PARAGRAPH_ALIGNMENT
     )  # pyright: ignore[reportAssignmentType]
     marL: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
-        "marL", ST_TextIndent
+        "marL", ST_TextMargin
     )
     marR: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
-        "marR", ST_TextIndent
+        "marR", ST_TextMargin
     )
     indent: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
         "indent", ST_TextIndent
