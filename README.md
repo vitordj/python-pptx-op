@@ -157,8 +157,19 @@ cell.borders.left.dash_style = MSO_LINE_DASH_STYLE.DASH
 ```
 
 `pptx.tablekit` builds on this with reusable styles, so a formatted report table is a
-handful of declarative lines rather than four nested loops. See
-[the tables guide](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/tables.rst).
+handful of declarative lines rather than four nested loops. Column formats write the
+numbers of a column one way and colour them by value:
+
+```python
+from pptx.tablekit import ColumnFormat, NumberFormat, StyleRule
+
+pct = NumberFormat(2, percent=True, decimal_sep=",", thousands_sep=".")   # 12,35%
+st.fill_rows(rows, header_style=HEADER, body_style=BODY, column_formats={
+    2: ColumnFormat(pct, rules=[StyleRule.negative(CellStyle(color="C00000"))]),
+})
+```
+
+See [the tables guide](https://github.com/vitordj/python-pptx-op/blob/master/docs/ext/tables.rst).
 
 ### Modern charts
 

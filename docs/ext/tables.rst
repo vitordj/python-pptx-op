@@ -176,7 +176,7 @@ you never lose access to the full python-pptx API.
    :widths: 45, 55
 
    "``set(row, col, text, style=None)``", "Set one cell's text, optionally styling it"
-   "``fill_rows(data, header_style=, body_style=, first_row_is_header=True)``", "Populate from a 2-D sequence, styling the header and body rows"
+   "``fill_rows(data, header_style=, body_style=, first_row_is_header=True, column_formats=None)``", "Populate from a 2-D sequence, styling the header and body rows; see `Column formats and conditional styles`_"
    "``style_cell(row, col, style)``", "Style one cell"
    "``style_range(r0, c0, r1, c1, style)``", "Style an inclusive rectangle"
    "``style_row(row, style, cols=None)``", "Style a whole row, or selected columns of it"
@@ -270,5 +270,91 @@ interface it uses::
     )
     st.fit(width_cm=24).autosize_rows(font_pt=9)
 
-Every value is converted with ``str()``, so format numbers and dates in the DataFrame
-before handing it over.
+Columns without a format are converted with ``str()``. To format numbers and colour
+them by value, pass ``column_formats`` keyed by column label (and by ``df.index.name``
+for the index when ``index=True``)::
+
+    st = dataframe_to_table(
+        slide.shapes, df, Cm(2), Cm(2), Cm(24), Cm(8),
+        header_style=HEADER, body_style=BODY,
+        column_formats={
+            "Retorno": ColumnFormat(PCT, rules=[StyleRule.negative(RED)], na="–"),
+            "PL": ColumnFormat(NumberFormat(0, decimal_sep=",", thousands_sep=".")),
+        },
+    )
+
+A label that is not a column raises ``KeyError``.
+
+
+Column formats and conditional styles
+-------------------------------------
+
+A report table usually needs the numbers in one column written the same way (``12,35%``)
+and some of them coloured by value (negatives in red). ``fill_rows()`` and
+``dataframe_to_table()`` take ``column_formats``, a mapping from column to a
+``ColumnFormat`` that decides the text **and** the style of that column's body cells from
+the raw value::
+
+    from pptx.tablekit import ColumnFormat, NumberFormat, StyleRule
+
+    PCT = NumberFormat(2, percent=True, decimal_sep=",", thousands_sep=".")
+    RED = CellStyle(color="C00000")
+    GREEN = CellStyle(color="00B050")
+
+    st.fill_rows(
+        [["Fundo", "Peso", "Retorno"],
+         ["Alpha", 0.60, 0.0125],
+         ["Beta", 0.40, -0.031]],
+        header_style=HEADER,
+        body_style=BODY,
+        column_formats={
+            1: ColumnFormat(PCT),
+            2: ColumnFormat(PCT, style=CellStyle(align="right"),
+                            rules=[StyleRule.negative(RED), StyleRule.positive(GREEN)]),
+        },
+    )
+    # Retorno shows "1,25%" in green and "-3,10%" in red
+
+In ``fill_rows()`` the keys are column indexes; in ``dataframe_to_table()`` they are
+column labels. The header row is never formatted, and columns without an entry behave as
+before.
+
+**The text** comes from ``formatter``:
+
+.. csv-table::
+   :header: "formatter", "Example", "Gives"
+   :widths: 30, 40, 30
+
+   "``None``", "", "``str(value)``"
+   "a format spec", "``ColumnFormat("",.2f"")``", "``1,234.50``"
+   "a template with ``{}``", "``ColumnFormat(""R$ {:,.0f}"")``", "``R$ 2,500``"
+   "a callable", "``ColumnFormat(lambda v: v.strftime(""%d/%m/%Y""))``", "``31/10/2026``"
+   "a ``NumberFormat``", "``ColumnFormat(NumberFormat(2, decimal_sep="","", thousands_sep="".""))``", "``1.234,50``"
+
+``NumberFormat(decimals=2, percent=False, decimal_sep='.', thousands_sep=',',
+prefix='', suffix='')`` is a reusable number formatter whose separators can be swapped,
+which Python's format specs cannot do: ``NumberFormat(2, decimal_sep=",",
+thousands_sep=".")`` writes ``1.234,50``. ``percent=True`` multiplies by 100 and appends
+``%``. A value that rounds to zero is written without a minus sign. Values that are not
+numbers pass through as ``str(value)``, so a column can hold the odd label.
+
+A missing value (``None`` or NaN) is written as ``na`` (``""`` by default); the formatter
+is not called for it.
+
+**The style** is built in layers, each one overriding only the fields it sets:
+
+1. the table's ``body_style``;
+2. the column's ``style``;
+3. every rule in ``rules`` whose condition holds, in order — a later rule wins.
+
+A ``StyleRule(when, style)`` applies ``style`` when ``when(value)`` is true. ``when``
+receives the **raw** value, not the formatted text, so ``StyleRule(lambda v: v < -0.05,
+CellStyle(bold=True))`` works on a column displayed as percentages. Missing values never
+match. ``StyleRule.negative()``, ``.positive()`` and ``.zero()`` cover the sign-based
+cases and ignore values that are not numbers. Because rules see the raw value, ``-0.001``
+shown as ``0,00%`` still matches ``negative()``; round the data first if that matters.
+
+``ColumnFormat.text(value)`` and ``ColumnFormat.style_for(value, base)`` are public, so
+the same formats can drive ``StyledTable.set()`` for tables filled cell by cell. The
+layering is also available on its own as ``CellStyle.overlay(other)``, which returns a
+style with ``other``'s set fields on top.
