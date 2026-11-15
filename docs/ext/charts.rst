@@ -97,6 +97,58 @@ Each tuple is a full path from the root to a leaf; the intermediate levels are w
 chart groups by. A flat list of strings works for a treemap too — it just produces a
 single, ungrouped level.
 
+The data is checked when the chart is built: ``add_chartex()`` raises ``ValueError``,
+and adds nothing to the slide, when the category and value counts differ, a value is
+``nan`` or infinite, hierarchical categories have unequal depths, or one of the
+formatting options below does not fit the data.
+
+Waterfall totals
+~~~~~~~~~~~~~~~~
+
+In a waterfall, a *total* bar starts at zero instead of floating on the running sum. By
+default the first and last categories are totals, which fits the common "opening …
+closing" shape. ``subtotal_idxs`` marks exactly the points you list instead::
+
+    data.categories = ["Q1", "Q2", "Q3", "Q4", "Year"]
+    data.add_series("Result", (12, -4, 7, 3, 18))
+    data.subtotal_idxs = [4]        # only "Year" is a total
+    data.subtotal_idxs = []         # no totals at all
+    data.subtotal_idxs = None       # back to the default (first and last)
+
+Formatting
+~~~~~~~~~~
+
+``ChartExData`` also carries the formatting the chart is written with. Every option is
+``None`` (or empty) by default, which leaves the chart style's own look::
+
+    data.point_colors = ["8CC640", "8CC640", "FF0000", None, "1F4E79"]
+    data.number_format = "0.00%"
+    data.font_name = "Montserrat"
+    data.font_size = 9
+
+.. csv-table::
+   :header: "Property", "Applies to", "Notes"
+   :widths: 18, 32, 50
+
+   "``point_colors``", "Fill of each bar, slice or box", "One colour per point, in order: an ``RGBColor`` or a hex string such as ``92D050`` or ``#92D050``. ``None`` entries and points past the end of the list keep the theme colour. More colours than values is an error"
+   "``number_format``", "Data labels, value-axis tick labels and the cached values", "Any Excel format code, e.g. ``0.0%`` or ``#,##0.00``"
+   "``font_name``", "Data labels and tick labels of every axis", "Latin typeface"
+   "``font_size``", "Data labels and tick labels of every axis", "Points, 1 to 4000"
+
+A misspelled property name raises ``AttributeError`` rather than being silently ignored.
+
+A typical green-up / red-down waterfall::
+
+    values = (0.10, 0.03, -0.02, 0.04, 0.15)
+    data = ChartExData()
+    data.categories = ["Previous", "Equities", "Credit", "FX", "Total"]
+    data.add_series("Attribution", values)
+    data.point_colors = [
+        "7F7F7F" if i in (0, len(values) - 1) else ("8CC640" if v >= 0 else "E5413B")
+        for i, v in enumerate(values)
+    ]
+    data.number_format = "0.00%"
+
 
 Doughnut geometry
 -----------------

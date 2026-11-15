@@ -8,9 +8,12 @@ tuples, root-first), the latter being used by treemap and sunburst.
 from __future__ import annotations
 
 import math
+import re
 from typing import Iterable, Sequence, Union
 
 CategoryValue = Union[str, Sequence[str]]
+
+_HEX_COLOR = re.compile(r"[0-9A-F]{6}")
 
 
 class ChartExData:
@@ -29,10 +32,28 @@ class ChartExData:
         data.add_series("Tamanho", (22, 12))
     """
 
+    # -- a data holder: `__slots__` turns a misspelled attribute into an immediate
+    # -- AttributeError instead of a silently-ignored setting.
+    __slots__ = (
+        "_categories",
+        "_series_name",
+        "_values",
+        "_point_colors",
+        "_subtotal_idxs",
+        "_number_format",
+        "_font_name",
+        "_font_size",
+    )
+
     def __init__(self) -> None:
         self._categories: list[CategoryValue] = []
         self._series_name: str | None = None
         self._values: list[float] = []
+        self._point_colors: list[str | None] = []
+        self._subtotal_idxs: list[int] | None = None
+        self._number_format: str | None = None
+        self._font_name: str | None = None
+        self._font_size: float | None = None
 
     @property
     def categories(self) -> list[CategoryValue]:
@@ -62,9 +83,10 @@ class ChartExData:
     def validate(self) -> None:
         """Raise |ValueError| if this data cannot be written as a valid chartEx part.
 
-        Checks that the category and value counts agree, that every value is finite, and
-        that hierarchical categories all have the same depth (and are not mixed with plain
-        strings). Returns |None| when the data is fine; never modifies the data.
+        Checks that the category and value counts agree, that every value is finite, that
+        subtotal indexes and point colors fit the values, and that hierarchical categories
+        all have the same depth (and are not mixed with plain strings). Returns |None| when
+        the data is fine; never modifies the data.
         """
         n_cats, n_vals = len(self._categories), len(self._values)
         if n_cats != n_vals:
@@ -79,6 +101,17 @@ class ChartExData:
                     f"chartEx value at index {idx} is {value!r}; "
                     "values must be finite (no nan or inf)"
                 )
+
+        if self._subtotal_idxs is not None:
+            for idx in self._subtotal_idxs:
+                if not 0 <= idx < n_vals:
+                    raise ValueError(f"subtotal index {idx} is out of range for {n_vals} values")
+
+        if len(self._point_colors) > n_vals:
+            raise ValueError(
+                f"{len(self._point_colors)} point colors given for {n_vals} values; "
+                "give at most one color per value"
+            )
 
         if not self._categories:
             return
@@ -100,6 +133,88 @@ class ChartExData:
                     f"has depth {first_depth}; all hierarchical categories must have the "
                     "same depth"
                 )
+
+    # -- optional formatting ---------------------------------------------------
+
+    @property
+    def point_colors(self) -> list[str | None]:
+        """Per-data-point fill colors as ``RRGGBB`` hex strings.
+
+        A shorter list (or a ``None`` entry) leaves the remaining points with the
+        theme color assigned by the chart color style. Used e.g. to paint a waterfall
+        green for positive and red for negative contributions.
+        """
+        return self._point_colors
+
+    @point_colors.setter
+    def point_colors(self, value: Iterable[str | None] | None) -> None:
+        if value is None:
+            self._point_colors = []
+            return
+        colors: list[str | None] = []
+        for idx, c in enumerate(value):
+            if c is None:
+                colors.append(None)
+                continue
+            hex_ = str(c).lstrip("#").upper()
+            if not _HEX_COLOR.fullmatch(hex_):
+                raise ValueError(
+                    f"point color at index {idx} is {c!r}; expected an RGBColor or a"
+                    " six-digit hex string such as '92D050' or '#92D050'"
+                )
+            colors.append(hex_)
+        self._point_colors = colors
+
+    @property
+    def subtotal_idxs(self) -> list[int] | None:
+        """Indexes of the waterfall points drawn as totals (bars starting at zero).
+
+        ``None`` (the default) keeps the convention of treating the first and last
+        categories as totals; set it explicitly to mark only some of them — e.g.
+        ``[len(values) - 1]`` when only the closing "Total" bar is a total.
+        """
+        return self._subtotal_idxs
+
+    @subtotal_idxs.setter
+    def subtotal_idxs(self, value: Iterable[int] | None) -> None:
+        self._subtotal_idxs = None if value is None else sorted({int(i) for i in value})
+
+    @property
+    def number_format(self) -> str | None:
+        """Number format code for the values, e.g. ``"0.00%"``.
+
+        Applied to the cached values, to the value axis tick labels and to the data
+        labels. ``None`` means ``"General"``.
+        """
+        return self._number_format
+
+    @number_format.setter
+    def number_format(self, value: str | None) -> None:
+        self._number_format = None if value is None else str(value)
+
+    @property
+    def font_name(self) -> str | None:
+        """Latin typeface for axis tick labels and data labels (``None`` = inherit)."""
+        return self._font_name
+
+    @font_name.setter
+    def font_name(self, value: str | None) -> None:
+        self._font_name = None if value is None else str(value)
+
+    @property
+    def font_size(self) -> float | None:
+        """Font size *in points* for axis tick labels and data labels."""
+        return self._font_size
+
+    @font_size.setter
+    def font_size(self, value: float | None) -> None:
+        if value is None:
+            self._font_size = None
+            return
+        size = float(value)
+        if not (1.0 <= size <= 4000.0):
+            raise ValueError(f"font_size must be between 1 and 4000 points, got {value!r}")
+        self._font_size = size
 
     # -- internal helpers used by the XML writer ------------------------------
 
