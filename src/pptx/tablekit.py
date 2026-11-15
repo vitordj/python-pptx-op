@@ -42,8 +42,11 @@ Why this exists (the limitations it papers over):
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
-from typing import TYPE_CHECKING, Iterable, Sequence
+import math
+import numbers
+from dataclasses import dataclass, fields, replace
+from decimal import Decimal
+from typing import TYPE_CHECKING, Any, Callable, Iterable, Mapping, Sequence, Union
 
 from pptx.dml.color import RGBColor
 from pptx.enum.text import MSO_VERTICAL_ANCHOR, PP_ALIGN
@@ -183,6 +186,22 @@ class CellStyle:
         """Return a copy of this style with the given fields overridden."""
         return replace(self, **overrides)
 
+    def overlay(self, other: "CellStyle | None") -> "CellStyle":
+        """Return this style with every *set* (non-``None``) field of `other` on top.
+
+        ``BASE.overlay(RED)`` is what applying ``BASE`` and then ``RED`` to a cell would
+        give, as a single style. Fields are replaced whole, so a ``borders`` in `other`
+        replaces the entire |BorderSpec| rather than merging edge by edge.
+        """
+        if other is None:
+            return self
+        changes = {
+            f.name: getattr(other, f.name)
+            for f in fields(other)
+            if getattr(other, f.name) is not None
+        }
+        return replace(self, **changes) if changes else self
+
 
 # ---------------------------------------------------------------------------
 # applying styles to live cells
@@ -305,6 +324,170 @@ def min_row_height_for_font(font_pt: float, lines: int = 1, pad_cm: float = 0.0)
 
 
 # ---------------------------------------------------------------------------
+# value formatting and conditional styles
+# ---------------------------------------------------------------------------
+
+
+def _is_missing(value: Any) -> bool:
+    """True for ``None`` and for float NaN (including pandas/numpy NaN)."""
+    if value is None:
+        return True
+    try:
+        return isinstance(value, float) and math.isnan(value)
+    except TypeError:  # pragma: no cover - defensive
+        return False
+
+
+def _as_number(value: Any) -> "float | None":
+    """`value` as a float when it is a real number (not a bool, not NaN), else None."""
+    if isinstance(value, bool) or _is_missing(value):
+        return None
+    if isinstance(value, (numbers.Real, Decimal)):
+        number = float(value)
+        return None if math.isnan(number) else number
+    return None
+
+
+@dataclass(frozen=True)
+class NumberFormat:
+    """A reusable number formatter, e.g. ``NumberFormat(2, percent=True)``.
+
+    Call it with a number to get the text: ``NumberFormat(2)(1234.5)`` gives
+    ``"1,234.50"``. The separators are configurable, so the Brazilian convention is
+    ``NumberFormat(2, decimal_sep=",", thousands_sep=".")``, which gives ``"1.234,50"``.
+
+    `percent` multiplies by 100 and appends ``%`` (before `suffix`). Values that are not
+    numbers (strings, ``None``) are returned as ``str(value)`` unchanged, so a column can
+    hold the odd label among its numbers.
+    """
+
+    decimals: int = 2
+    percent: bool = False
+    decimal_sep: str = "."
+    thousands_sep: str = ","
+    prefix: str = ""
+    suffix: str = ""
+
+    def __post_init__(self):
+        if self.decimals < 0:
+            raise ValueError(f"decimals must be 0 or more, got {self.decimals}")
+
+    def __call__(self, value: Any) -> str:
+        number = _as_number(value)
+        if number is None:
+            return "" if value is None else str(value)
+        if self.percent:
+            number *= 100
+        magnitude = round(abs(number), self.decimals)
+        text = f"{magnitude:,.{self.decimals}f}"
+        # -- map both separators in one pass so swapping "," and "." works
+        text = text.translate({ord(","): self.thousands_sep, ord("."): self.decimal_sep})
+        # -- no sign on a value that rounds to zero ("-0.00" reads as an error)
+        sign = "-" if number < 0 and magnitude != 0 else ""
+        pct = "%" if self.percent else ""
+        return f"{sign}{self.prefix}{text}{pct}{self.suffix}"
+
+
+@dataclass(frozen=True)
+class StyleRule:
+    """A conditional style: `style` is applied to a cell whose raw value passes `when`.
+
+    `when` receives the value as it was given to the table -- the number, not its
+    formatted text -- so ``StyleRule(lambda v: v < 0, RED)`` works on ``-0.5`` even when
+    the column shows it as ``"-50.00%"``. Missing values (``None``, NaN) never match.
+
+    The class methods cover the usual sign-based rules and simply skip values that are
+    not numbers::
+
+        StyleRule.negative(CellStyle(color="C00000"))
+        StyleRule.positive(CellStyle(color="00B050"))
+    """
+
+    when: "Callable[[Any], bool]"
+    style: CellStyle
+
+    def matches(self, value: Any) -> bool:
+        """True when `value` is not missing and `when(value)` is truthy."""
+        if _is_missing(value):
+            return False
+        return bool(self.when(value))
+
+    @classmethod
+    def negative(cls, style: CellStyle) -> "StyleRule":
+        """Match numbers below zero."""
+        return cls(lambda v: (n := _as_number(v)) is not None and n < 0, style)
+
+    @classmethod
+    def positive(cls, style: CellStyle) -> "StyleRule":
+        """Match numbers above zero."""
+        return cls(lambda v: (n := _as_number(v)) is not None and n > 0, style)
+
+    @classmethod
+    def zero(cls, style: CellStyle) -> "StyleRule":
+        """Match numbers equal to zero."""
+        return cls(lambda v: (n := _as_number(v)) is not None and n == 0, style)
+
+
+Formatter = Union[Callable[[Any], str], str]
+
+
+@dataclass(frozen=True)
+class ColumnFormat:
+    """How the body cells of one column are written: text, base style and rules.
+
+    `formatter` turns each raw value into the cell text. It is a callable such as a
+    |NumberFormat| or a lambda, or a string: a format spec for :func:`format`
+    (``",.2f"``, ``".1%"``) or a template with a ``{}`` field (``"R$ {:,.2f}"``).
+    ``None`` means ``str(value)``.
+
+    `style` is overlaid on the table's body style for this column, then every rule in
+    `rules` whose condition holds for the value is overlaid in order, so a later rule
+    wins on the fields it sets.
+
+    `na` is the text for a missing value (``None`` or NaN); the formatter is not called
+    for it and no rule matches it.
+    """
+
+    formatter: "Formatter | None" = None
+    style: "CellStyle | None" = None
+    rules: "Sequence[StyleRule]" = ()
+    na: str = ""
+
+    def __post_init__(self):
+        # -- accept a single rule or any iterable, and store a tuple so the style stays
+        # -- hashable and immutable
+        rules = self.rules
+        if isinstance(rules, StyleRule):
+            rules = (rules,)
+        object.__setattr__(self, "rules", tuple(rules))
+
+    def text(self, value: Any) -> str:
+        """The cell text for `value`."""
+        if _is_missing(value):
+            return self.na
+        formatter = self.formatter
+        if formatter is None:
+            return str(value)
+        if isinstance(formatter, str):
+            if "{" in formatter:
+                return formatter.format(value)
+            return format(value, formatter)
+        return str(formatter(value))
+
+    def style_for(self, value: Any, base: "CellStyle | None" = None) -> "CellStyle | None":
+        """The style for a cell holding `value`: `base`, then `style`, then matching rules.
+
+        Returns ``None`` when there is nothing to apply.
+        """
+        result = base
+        for layer in (self.style, *(r.style for r in self.rules if r.matches(value))):
+            if layer is None:
+                continue
+            result = layer if result is None else result.overlay(layer)
+        return result
+
+
+# ---------------------------------------------------------------------------
 # StyledTable -- the ergonomic wrapper
 # ---------------------------------------------------------------------------
 
@@ -414,16 +597,35 @@ class StyledTable:
         header_style: "CellStyle | None" = None,
         body_style: "CellStyle | None" = None,
         first_row_is_header: bool = True,
+        column_formats: "Mapping[int, ColumnFormat] | None" = None,
     ) -> "StyledTable":
         """Populate the table from a 2D sequence and style header/body rows.
 
         `data[0]` is treated as the header row when `first_row_is_header` is True.
+
+        `column_formats` maps a column index to a |ColumnFormat| that decides the text and
+        style of that column's *body* cells from their raw values, e.g.
+        ``{2: ColumnFormat(NumberFormat(2, percent=True), rules=[StyleRule.negative(RED)])}``.
+        The header row is never formatted. Other columns behave as before: ``str(value)``
+        with `body_style`.
         """
+        formats = dict(column_formats or {})
+        ncols = len(self._table.columns)
+        for col in formats:
+            if not isinstance(col, int) or not 0 <= col < ncols:
+                raise KeyError(
+                    f"column_formats key {col!r} is not a column index of this table "
+                    f"(0 to {ncols - 1})"
+                )
         for r, row_vals in enumerate(data):
             is_header = first_row_is_header and r == 0
             style = header_style if is_header else body_style
             for c, val in enumerate(row_vals):
-                self.set(r, c, val, style)
+                fmt = None if is_header else formats.get(c)
+                if fmt is None:
+                    self.set(r, c, val, style)
+                else:
+                    self.set(r, c, fmt.text(val), fmt.style_for(val, style))
         return self
 
     # -- merging -------------------------------------------------------------
@@ -552,21 +754,46 @@ def dataframe_to_table(
     body_style: "CellStyle | None" = None,
     include_header: bool = True,
     index: bool = False,
+    column_formats: "Mapping[Any, ColumnFormat] | None" = None,
 ) -> "StyledTable":
     """Build a fully-styled table from a pandas DataFrame in one call.
 
+    `column_formats` maps a column *label* (as in ``df.columns``, or ``df.index.name``
+    when `index` is True) to a |ColumnFormat|. The formatter and rules receive the raw
+    values from the DataFrame, so numeric rules such as ``StyleRule.negative`` work on
+    numeric columns. A label that is not a column raises ``KeyError``.
+
     Returns the |StyledTable| so the caller can still ``fit``/``autosize_rows``/merge.
     """
-    cols = ([df.index.name or ""] + list(df.columns)) if index else list(df.columns)
-    rows = []
-    if include_header:
-        rows.append([str(c) for c in cols])
-    for tup in df.itertuples(index=index):
-        rows.append(["" if v is None else str(v) for v in tup])
+    labels = ([df.index.name] + list(df.columns)) if index else list(df.columns)
+    header = [("" if c is None else str(c)) for c in labels]
 
-    nrows, ncols = len(rows), len(cols)
+    formats_by_pos: "dict[int, ColumnFormat]" = {}
+    for label, fmt in (column_formats or {}).items():
+        positions = [i for i, c in enumerate(labels) if c == label and c is not None]
+        if not positions:
+            raise KeyError(f"column_formats key {label!r} is not a column of the DataFrame")
+        for pos in positions:
+            formats_by_pos[pos] = fmt
+
+    rows: "list[list[Any]]" = []
+    if include_header:
+        rows.append(header)
+    for tup in df.itertuples(index=index):
+        rows.append(
+            [
+                v if pos in formats_by_pos else ("" if v is None else str(v))
+                for pos, v in enumerate(tup)
+            ]
+        )
+
+    nrows, ncols = len(rows), len(labels)
     st = StyledTable.add(shapes, nrows, ncols, x, y, cx, cy)
     st.fill_rows(
-        rows, header_style=header_style, body_style=body_style, first_row_is_header=include_header
+        rows,
+        header_style=header_style,
+        body_style=body_style,
+        first_row_is_header=include_header,
+        column_formats=formats_by_pos,
     )
     return st

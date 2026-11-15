@@ -36,6 +36,12 @@ for full documentation of each item.
   and ``StyledTable`` for reusable styles, range styling, exact sizing, run merging and
   DataFrame import; works around table-style banding overriding explicit fills and stored
   row heights being only a minimum (upstream #27, #203, #573, #480, #296)
+- feat(tablekit): column formats and conditional styles. ``fill_rows()`` and
+  ``dataframe_to_table()`` take ``column_formats``, mapping a column to a ``ColumnFormat``
+  that sets the cell text (format spec, template, callable, or the new ``NumberFormat``
+  with configurable decimal and thousands separators) and the style from the raw value,
+  with ``StyleRule`` conditions such as ``StyleRule.negative(red)``. ``CellStyle.overlay()``
+  layers one style on another
 - tablekit: ``StyledTable.merge_equal_runs()`` now skips only blank cells by default
   (``skip=("",)``). The previous default also skipped a domain-specific label left over
   from the module's original use case; pass ``skip=`` explicitly to keep that behaviour
