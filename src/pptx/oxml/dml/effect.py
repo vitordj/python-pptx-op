@@ -46,7 +46,12 @@ class CT_EffectList(BaseOxmlElement):
     del _tag_seq
 
     def _new_outerShdw(self):
-        """Default outer-shadow matching PowerPoint's 'Offset: Bottom-Right' preset."""
+        """A soft black drop-shadow offset straight down (`dir` 90°), 63% opaque.
+
+        Seeded when a shadow property is set on a shape that has no `a:outerShdw` yet, so
+        that assigning a single property yields a plausible shadow rather than a
+        zero-distance artifact. Every value is overwritable by the public API.
+        """
         from pptx.oxml import parse_xml
 
         return parse_xml(

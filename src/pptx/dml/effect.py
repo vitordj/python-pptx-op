@@ -21,8 +21,9 @@ class ShadowFormat(object):
 
     Shadow properties (``blur_radius``, ``distance``, ``direction``,
     ``color``) target the OOXML ``a:outerShdw`` element. Reading any of
-    them returns ``None`` when no explicit shadow is set; writing any of
-    them creates the shadow element with sensible defaults on first write.
+    them returns ``None`` when no explicit shadow is set. Setting
+    ``blur_radius``, ``distance`` or ``direction`` creates the shadow element
+    with defaults; ``color`` gives a ``ColorFormat`` only once it exists.
 
     ``soft_edge_radius`` targets the ``a:softEdge`` element independently.
     """
@@ -82,12 +83,13 @@ class ShadowFormat(object):
 
     @property
     def direction(self) -> float | None:
-        """Direction of shadow offset as float degrees (0-360), or None.
+        """Direction of the shadow offset as float degrees (0-360), or None.
 
-        0° = right, 90° = down, 180° = left, 270° = up.
-        PowerPoint's "Bottom-Right" preset uses 315° (≈ 5400000 / 60000).
-        Wait — actually 5400000/60000 = 90°. Let me clarify: 0=right, 90=down.
-        PowerPoint's offset-bottom-right default dir is 5400000 → 90°.
+        Angles run clockwise from east: 0° casts the shadow to the right, 90° straight
+        down, 180° left, and 270° up. A shadow to the lower right is therefore 45°.
+
+        Stored as `a:outerShdw@dir` in 60000ths of a degree; the conversion is handled
+        here, so assign plain degrees.
         """
         outerShdw = self._outerShdw
         return None if outerShdw is None else outerShdw.dir
@@ -98,11 +100,14 @@ class ShadowFormat(object):
 
     @property
     def color(self) -> ColorFormat | None:
-        """``ColorFormat`` for the shadow colour, or ``None`` if not set.
+        """``ColorFormat`` for the shadow colour; ``None`` until the shape has an explicit shadow.
 
-        Example::
+        Setting ``blur_radius``, ``distance`` or ``direction`` creates the shadow, after which
+        this returns a ``ColorFormat``. Example::
 
-            shape.shadow.color.rgb = RGBColor(0x00, 0x00, 0x00)
+            shadow = shape.shadow
+            shadow.blur_radius = Pt(4)
+            shadow.color.rgb = RGBColor(0x00, 0x00, 0x00)
         """
         outerShdw = self._outerShdw
         if outerShdw is None:

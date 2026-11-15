@@ -24,6 +24,7 @@ from pptx.oxml.simpletypes import (
     ST_TextFontSize,
     ST_TextIndent,
     ST_TextIndentLevelType,
+    ST_TextMargin,
     ST_TextPoint,
     ST_TextSpacingPercentOrPercentString,
     ST_TextSpacingPoint,
@@ -558,11 +559,23 @@ class CT_TextParagraphProperties(BaseOxmlElement):
     defRPr: CT_TextCharacterProperties | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
         "a:defRPr", successors=_tag_seq[16:]
     )
+    buClrTx: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buClrTx", successors=_tag_seq[4:]
+    )
     buClr: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
         "a:buClr", successors=_tag_seq[5:]
     )
+    buSzTx: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buSzTx", successors=_tag_seq[6:]
+    )
     buSzPct: CT_TextBulletSizePercent | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
         "a:buSzPct", successors=_tag_seq[7:]
+    )
+    buSzPts: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buSzPts", successors=_tag_seq[8:]
+    )
+    buFontTx: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buFontTx", successors=_tag_seq[9:]
     )
     buFont: CT_TextFont | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
         "a:buFont", successors=_tag_seq[10:]
@@ -576,6 +589,9 @@ class CT_TextParagraphProperties(BaseOxmlElement):
     buChar: CT_TextCharBullet | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
         "a:buChar", successors=_tag_seq[13:]
     )
+    buBlip: BaseOxmlElement | None = ZeroOrOne(  # pyright: ignore[reportAssignmentType]
+        "a:buBlip", successors=_tag_seq[14:]
+    )
     lvl: int = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
         "lvl", ST_TextIndentLevelType, default=0
     )
@@ -583,10 +599,10 @@ class CT_TextParagraphProperties(BaseOxmlElement):
         "algn", PP_PARAGRAPH_ALIGNMENT
     )  # pyright: ignore[reportAssignmentType]
     marL: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
-        "marL", ST_TextIndent
+        "marL", ST_TextMargin
     )
     marR: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
-        "marR", ST_TextIndent
+        "marR", ST_TextMargin
     )
     indent: int | None = OptionalAttribute(  # pyright: ignore[reportAssignmentType]
         "indent", ST_TextIndent

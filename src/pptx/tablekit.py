@@ -432,13 +432,14 @@ class StyledTable:
         self,
         col: int,
         rows: "Iterable[int] | None" = None,
-        skip=("", "Compromissada"),
+        skip: "Iterable[str]" = ("",),
     ) -> "StyledTable":
         """Merge vertically-adjacent cells in `col` that share the same text.
 
-        Native replacement for the spreadsheet ``mescla_coluna`` trick. Values in
-        `skip` are never merged (e.g. blanks, or a label that legitimately repeats).
+        Values in `skip` are never merged -- blank cells by default; pass e.g.
+        ``skip=("", "Subtotal")`` to also keep a label that legitimately repeats.
         """
+        skip = tuple(skip)
         nrows = len(self._table.rows)
         row_list = list(range(nrows) if rows is None else rows)
         i = 0
@@ -448,13 +449,21 @@ class StyledTable:
             j = 1
             while (
                 i + j < len(row_list)
+                and row_list[i + j] == row_list[i + j - 1] + 1
                 and self._table.cell(row_list[i + j], col).text == text
                 and text not in skip
             ):
                 j += 1
             if j > 1:
-                top = self._table.cell(r, col)
-                bottom = self._table.cell(row_list[i + j - 1], col)
+                run_cells = [self._table.cell(row_list[i + k], col) for k in range(j)]
+                top, bottom = run_cells[0], run_cells[-1]
+                # -- merge() appends the text of every non-empty spanned cell to the origin,
+                # -- which would repeat the shared text. Empty the other cells first; that
+                # -- leaves the origin's run formatting intact. Skip it when merge() is going
+                # -- to refuse the range anyway, so a failed call changes nothing.
+                if not any(c.is_merge_origin or c.is_spanned for c in run_cells):
+                    for cell in run_cells[1:]:
+                        cell.text = ""
                 top.merge(bottom)
             i += j
         return self
@@ -487,16 +496,38 @@ class StyledTable:
         return self
 
     def autosize_rows(
-        self, font_pt: float, lines: int = 1, pad_cm: float = 0.0, header_pt: "float | None" = None
+        self,
+        font_pt: float,
+        lines: int = 1,
+        pad_cm: float = 0.0,
+        header_pt: "float | None" = None,
+        include_margins: bool = True,
     ) -> "StyledTable":
         """Set every row height to the height PowerPoint will render (issues #480/#296).
 
+        Each row's height is the text height (~1.2x `font_pt` per line, times `lines`), plus
+        the cell text margins (when `include_margins` is true), plus `pad_cm` of extra space.
+        The margin part is the largest ``margin_top + margin_bottom`` among the row's cells,
+        read from the cells themselves, so custom margins (``CellStyle.margins_cm`` or
+        ``cell.margin_top = ...``) are honoured and a row with zero margins gets nothing added.
+
         `header_pt` lets the first row use a different font size than the body.
+
+        The margins used to be left out, which stored every row 0.1 inch too short with default
+        cell margins. Pass ``include_margins=False`` to get those earlier numbers exactly, for
+        instance when `pad_cm` was already chosen to make up for them.
         """
         rows = self._table.rows
         for i, row in enumerate(rows):
             pt = header_pt if (header_pt is not None and i == 0) else font_pt
-            row.height = min_row_height_for_font(pt, lines=lines, pad_cm=pad_cm)
+            height = int(min_row_height_for_font(pt, lines=lines, pad_cm=pad_cm))
+            if include_margins:
+                # -- spanned cells still report their own (default) margins, so no special case
+                height += max(
+                    (int(cell.margin_top) + int(cell.margin_bottom) for cell in row.cells),
+                    default=0,
+                )
+            row.height = Emu(height)
         return self
 
     def set_uniform_row_height(self, cm: float) -> "StyledTable":
