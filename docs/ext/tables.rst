@@ -190,7 +190,7 @@ you never lose access to the full python-pptx API.
 
    "``col_widths(widths_cm)``", "Set each column width from a list of cm values"
    "``fit(width_cm, height_cm=None)``", "Scale columns (and optionally rows) so the totals hit exact targets"
-   "``autosize_rows(font_pt, lines=1, pad_cm=0.0, header_pt=None)``", "Set row heights to what PowerPoint will actually render"
+   "``autosize_rows(font_pt, lines=1, pad_cm=0.0, header_pt=None, include_margins=True)``", "Set row heights to what PowerPoint will actually render"
    "``set_uniform_row_height(cm)``", "Give every row the same height"
 
 **Merging**
@@ -236,12 +236,15 @@ PowerPoint — which is impossible in a headless pipeline, and makes the file in
 for any other consumer.
 
 ``autosize_rows()`` sets the stored height to the height PowerPoint *would* render,
-computed as roughly 1.2 × the font size per line of text, plus margins::
+computed as roughly 1.2 × the font size per line of text, plus the largest
+``margin_top + margin_bottom`` among the row's cells (read from the cells, so custom
+margins count)::
 
     st.autosize_rows(font_pt=9)                  # every row, single line of 9 pt text
     st.autosize_rows(font_pt=9, header_pt=11)    # a taller first row
     st.autosize_rows(font_pt=9, lines=2)         # allow for two lines
     st.autosize_rows(font_pt=9, pad_cm=0.1)      # extra breathing room
+    st.autosize_rows(font_pt=9, include_margins=False)  # text height only
 
 The same calculation is available on its own::
 
