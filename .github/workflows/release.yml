@@ -1,0 +1,101 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tooling
+        run: pip install build twine
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Check distribution metadata
+        run: twine check --strict dist/*
+
+      # -- a tag must match `pptx.__version__`, or the release is mislabeled --
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          PKG_VERSION="$(sed -n 's/^__version__ = "\(.*\)"$/\1/p' src/pptx/__init__.py)"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "package=$PKG_VERSION tag=$TAG_VERSION"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match __version__ $PKG_VERSION"
+            exit 1
+          fi
+
+      - name: Install the built wheel and smoke-test it
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --quiet dist/*.whl
+          /tmp/smoke/bin/python - <<'PY'
+          from pptx import Presentation
+          from pptx.chartex import ChartExData
+          from pptx.enum.chart import XL_CHART_EX_TYPE
+          from pptx.tablekit import StyledTable, CellStyle
+          from pptx.util import Cm
+          import pptx
+
+          prs = Presentation()
+          slide = prs.slides.add_slide(prs.slide_layouts[6])
+
+          # the chartEx template parts must ship inside the wheel
+          data = ChartExData()
+          data.categories = ["a", "b", "c"]
+          data.add_series("s", (1.0, 2.0, 3.0))
+          slide.shapes.add_chartex(
+              XL_CHART_EX_TYPE.WATERFALL, Cm(1), Cm(1), Cm(10), Cm(6), data
+          )
+
+          st = StyledTable.add(slide.shapes, 2, 2, Cm(1), Cm(8), Cm(10), Cm(2))
+          st.fill_rows([["a", "b"], ["c", "d"]], body_style=CellStyle(size=10))
+
+          prs.save("/tmp/smoke.pptx")
+          print("smoke test OK, version", pptx.__version__)
+          PY
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    # -- only a tag push publishes; workflow_dispatch just builds and checks --
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/python-pptx-op
+    permissions:
+      # -- required for PyPI trusted publishing; no API token is stored --
+      id-token: write
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1

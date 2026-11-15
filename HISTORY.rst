@@ -3,6 +3,133 @@
 Release History
 ---------------
 
+1.1.0 (unreleased)
+++++++++++++++++++
+
+First release of the ``python-pptx-op`` fork, from python-pptx 1.0.2. All feature
+changes below are additive: no upstream API was changed or removed. See ``docs/ext/``
+for full documentation of each item.
+
+**Packaging**
+
+- The distribution is now published as ``python-pptx-op``. The import name is unchanged,
+  so ``import pptx`` and existing code keep working. Because both distributions provide
+  the same ``pptx`` package they must not be installed side by side — pip does not detect
+  the conflict and the result is a silently broken mixture
+- Raise the Python floor to 3.9. 3.8 reached end of life in October 2024, CI has only
+  ever tested 3.9 and later, and the pyright configuration already targets 3.9
+- Add ``.github/workflows/release.yml``: builds the sdist and wheel on a ``v*`` tag,
+  runs ``twine check --strict``, verifies the tag matches ``pptx.__version__``,
+  smoke-tests the built wheel in a clean virtualenv, and publishes to PyPI through
+  trusted publishing (no stored API token)
+- Add classifiers for Python 3.13 and ``Typing :: Typed``; point the project URLs at the
+  fork and credit the upstream project
+- build: ship ``src/pptx/chartex/templates`` in the wheel. ``MANIFEST.in`` only listed
+  ``src/pptx/templates``, so built wheels left out the chartEx style and colour parts and
+  ``add_chartex()`` raised ``FileNotFoundError`` on any non-editable install
+
+**Tables**
+
+- feat(table): per-cell border access via ``cell.borders`` — four edges plus two
+  diagonals, each a ``LineFormat`` (upstream #71)
+- feat(tablekit): new ``pptx.tablekit`` module — ``CellStyle``, ``BorderSpec``, ``Edge``
+  and ``StyledTable`` for reusable styles, range styling, exact sizing, run merging and
+  DataFrame import; works around table-style banding overriding explicit fills and stored
+  row heights being only a minimum (upstream #27, #203, #573, #480, #296)
+- tablekit: ``StyledTable.merge_equal_runs()`` now skips only blank cells by default
+  (``skip=("",)``). The previous default also skipped a domain-specific label left over
+  from the module's original use case; pass ``skip=`` explicitly to keep that behaviour
+
+**Charts**
+
+- feat(chartex): new ``pptx.chartex`` module and ``shapes.add_chartex()`` for the 2014
+  Chart Extension family — waterfall, funnel, treemap, sunburst, box & whisker and the
+  clustered-column (histogram) layout
+- feat(chartex): ``ChartExData`` formatting — per-point fill colours (``point_colors``),
+  explicit waterfall totals (``subtotal_idxs``), a number format for data labels, the
+  value axis and the cached values (``number_format``), and the label font
+  (``font_name``, ``font_size``). ``ChartExData`` now uses ``__slots__``, so a misspelled
+  attribute raises ``AttributeError``
+- feat(chart): date-axis time units — ``base_time_unit``, ``major_time_unit`` and
+  ``minor_time_unit`` via the new ``XL_TIME_UNIT`` enumeration
+- feat(chart): ``DoughnutPlot.hole_size`` and ``.first_slice_angle`` (upstream #493)
+
+**Text**
+
+- feat(text): ``Font.strikethrough``, ``Font.superscript`` and ``Font.subscript``
+  (upstream #339, #574)
+- feat(text): ``Font.spacing``, ``Font.caps`` and ``Font.highlight_color``
+- feat(text): paragraph bullet control via ``paragraph.bullet`` — ``none()``,
+  ``character()`` and ``auto_number()``, with bullet font, colour and size
+  (upstream #100, #114)
+- feat(text): ``_Paragraph.margin_left``, ``.margin_right`` and ``.first_line_indent``
+- feat(text): ``TextFrame.text_direction`` with the new ``MSO_TEXT_DIRECTION``
+  enumeration
+- feat(fonts): Linux font directories, plus a ``PYTHON_PPTX_FONT_DIRECTORY`` override so
+  ``fit_text()`` works on Linux and unknown platforms (mirrors upstream PR #1039)
+
+**Shapes, colour and effects**
+
+- feat(dml): ``ColorFormat.transparency`` for fill and line colours (upstream #62)
+- feat(shapes): ``Picture.transparency``
+- feat(dml): ``ShadowFormat.blur_radius``, ``.distance``, ``.direction``, ``.color``,
+  ``.remove_shadow()`` and ``.soft_edge_radius``
+- feat(dml): ``LineFormat.begin_arrow``, ``.end_arrow`` and ``.cap`` (upstream #375)
+- feat(shapes): ``BaseShape.alt_text`` getter/setter for accessibility
+
+**Fixes to the additions above**
+
+These correct the fork's own additions before their first release; upstream behaviour is
+unaffected.
+
+- fix(text): ``_Paragraph.margin_left``, ``.margin_right`` and ``.first_line_indent`` are
+  written in EMU, as DrawingML defines ``a:pPr@marL/@marR/@indent``. They were converted
+  as hundredths of a point, so ``margin_left = Pt(36)`` came out as 0.28 pt in PowerPoint.
+  A negative margin now raises ``ValueError``
+- fix(text): paragraph bullets keep each "one of" group in ``a:pPr`` exclusive (colour,
+  size, font, kind), so restyling a bullet read from a file no longer leaves two
+  competing children. ``_Bullet.type`` reports ``"picture"`` for ``a:buBlip``. Bullet
+  ``color`` accepts an ``RGBColor`` or a hex string with optional ``#``; ``size_pct`` must
+  be 25..400; ``Font.strikethrough`` accepts only its documented values
+- fix(chart): ``DoughnutPlot.first_slice_angle`` inserts ``c:firstSliceAng`` before an
+  existing ``c:holeSize``; it was appended after it, which is schema-invalid
+- fix(chartex): ``ChartExData.validate()`` rejects mismatched category and value counts,
+  ``nan``/``inf`` values and hierarchical categories of unequal depth with a
+  ``ValueError``; it runs before any part is created
+- fix(dml): ``ColorFormat.transparency`` returns 0.0 instead of raising when no colour is
+  defined, and it and ``Picture.transparency`` read back without float noise (0.3, not
+  0.30000000000000004)
+- fix(tablekit): ``merge_equal_runs()`` no longer repeats the shared text in the merged
+  cell, keeps the origin cell's formatting, and treats only consecutive entries of
+  ``rows`` as adjacent
+- fix(tablekit): ``autosize_rows()`` adds the cells' top and bottom margins to the row
+  height, so stored heights match what PowerPoint draws. ``include_margins=False`` keeps
+  the previous numbers
+
+**Documentation and test suite**
+
+- docs: fork README and a new ``docs/ext/`` section documenting every addition
+- docs: move ``requirements-docs.txt`` to Sphinx 7; the pinned Sphinx 1.8 stack no longer
+  installs on current Python. The docs build is warning-free under ``sphinx -W``
+- fix(tests): stop ``DescribePartFactory`` leaking a mock into the class-level
+  ``PartFactory.part_type_for`` registry, which broke every later test that opened a real
+  package
+- test: unit-test suites for ``pptx.tablekit`` (``tests/test_tablekit_ext.py``) and
+  ``pptx.chartex`` (``tests/chartex/``), including a save-and-reopen check for every
+  emitted chart type
+- fix(tests): port the ``cxml`` test helper to pyparsing's snake_case/PascalCase API.
+  pyparsing 3.3 deprecates the camelCase names, which the suite's warnings-as-errors
+  setting turned into collection errors; ``requirements-test.txt`` now asks for
+  ``pyparsing>=3.1``
+- fix(tests): make the three class-scoped fixtures in ``tests/opc`` ordinary
+  function-scoped fixtures. pytest 9 deprecates class-scoped fixtures defined as instance
+  methods, and the suite's ``filterwarnings = ["error"]`` turned that warning into 16
+  collection errors; the classmethod workaround does not collect on Python 3.9
+- test: unit tests for date-axis time units and table cell borders, and PowerPoint-backed
+  checks for chartEx charts (``tests/chartex/test_chartex_powerpoint.py``, Windows with
+  PowerPoint 2016+ and pywin32 only; skipped elsewhere)
+
+
 1.0.2 (2024-08-07)
 ++++++++++++++++++
 
