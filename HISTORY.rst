@@ -45,6 +45,11 @@ for full documentation of each item.
 - feat(chartex): new ``pptx.chartex`` module and ``shapes.add_chartex()`` for the 2014
   Chart Extension family — waterfall, funnel, treemap, sunburst, box & whisker and the
   clustered-column (histogram) layout
+- feat(chartex): ``ChartExData`` formatting — per-point fill colours (``point_colors``),
+  explicit waterfall totals (``subtotal_idxs``), a number format for data labels, the
+  value axis and the cached values (``number_format``), and the label font
+  (``font_name``, ``font_size``). ``ChartExData`` now uses ``__slots__``, so a misspelled
+  attribute raises ``AttributeError``
 - feat(chart): date-axis time units — ``base_time_unit``, ``major_time_unit`` and
   ``minor_time_unit`` via the new ``XL_TIME_UNIT`` enumeration
 - feat(chart): ``DoughnutPlot.hole_size`` and ``.first_slice_angle`` (upstream #493)

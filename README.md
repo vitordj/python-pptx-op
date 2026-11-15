@@ -170,6 +170,9 @@ from pptx.util import Cm
 data = ChartExData()
 data.categories = ["Opening", "Q1", "Q2", "Q3", "Closing"]
 data.add_series("Cash flow", (100, 25, -12, 18, 131))
+data.point_colors = ["7F7F7F", "8CC640", "E5413B", "8CC640", "7F7F7F"]  # optional styling
+data.number_format = "#,##0"
+data.font_name, data.font_size = "Montserrat", 9
 
 slide.shapes.add_chartex(XL_CHART_EX_TYPE.WATERFALL,
                          Cm(2), Cm(2), Cm(20), Cm(11), data)
