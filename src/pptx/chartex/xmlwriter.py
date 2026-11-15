@@ -92,10 +92,10 @@ class ChartExXmlWriter:
     def _spec(self) -> _LayoutSpec:
         try:
             return _LAYOUT_SPEC[self._layout_id]
-        except KeyError:  # pragma: no cover - guarded at the public API too
+        except KeyError:
             raise NotImplementedError(
                 f"chartEx layoutId '{self._layout_id}' is not yet supported"
-            )
+            ) from None
 
     def xml_bytes(self) -> bytes:
         return self.xml.encode("utf-8")
@@ -159,9 +159,12 @@ class ChartExXmlWriter:
         if self._spec.layout_pr is not None:
             layout_pr = f"<cx:layoutPr>{self._spec.layout_pr(self._data)}</cx:layoutPr>"
         return (
-            f'<cx:series layoutId="{self._layout_id}" uniqueId="{{00000000-0000-0000-0000-000000000000}}">'
+            f'<cx:series layoutId="{self._layout_id}"'
+            ' uniqueId="{00000000-0000-0000-0000-000000000000}">'
             f"<cx:tx><cx:txData><cx:v>{escape(self._data.series_name)}</cx:v></cx:txData></cx:tx>"
-            '<cx:dataLabels><cx:visibility seriesName="0" categoryName="0" value="1"/></cx:dataLabels>'
+            "<cx:dataLabels>"
+            '<cx:visibility seriesName="0" categoryName="0" value="1"/>'
+            "</cx:dataLabels>"
             '<cx:dataId val="0"/>'
             f"{layout_pr}"
             "</cx:series>"
@@ -171,10 +174,7 @@ class ChartExXmlWriter:
     def _axes_xml(self) -> str:
         parts: list[str] = []
         for axis_id, kind in enumerate(self._spec.axes):
-            if kind == "val":
-                scaling = "<cx:valScaling/>"
-            else:
-                scaling = '<cx:catScaling gapWidth="0.5"/>'
+            scaling = "<cx:valScaling/>" if kind == "val" else '<cx:catScaling gapWidth="0.5"/>'
             parts.append(
                 f'<cx:axis id="{axis_id}">{scaling}'
                 "<cx:majorGridlines><cx:spPr><a:ln><a:noFill/></a:ln></cx:spPr></cx:majorGridlines>"
